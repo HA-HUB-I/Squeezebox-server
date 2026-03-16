@@ -6,9 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 # KV namespace for caching radio stations
 # Create with: wrangler kv:namespace create "RADIO_KV"
 # Then replace the id below
-[[kv_namespaces]]
-binding = "RADIO_KV"
-id = "REPLACE_WITH_YOUR_KV_ID"
+#[[kv_namespaces]]
+#binding = "RADIO_KV"
+#id = "REPLACE_WITH_YOUR_KV_ID"
 
 [vars]
 ENVIRONMENT = "production"
