@@ -41,11 +41,7 @@ nslookup squeezecloud.YOUR_SUBDOMAIN.workers.dev
 
 ### 5. Patch Squeezebox hosts file (permanent!)
 ```bash
-ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 \
-    -oHostKeyAlgorithms=+ssh-rsa \
-    -oCiphers=+aes128-cbc \
-    -oMACs=+hmac-sha1 \
-    root@192.168.1.72
+ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-rsa -oCiphers=+aes128-cbc -oMACs=+hmac-sha1 root@192.168.1.72
 
 # On the device:
 echo "WORKER_IP mysqueezebox.com" >> /mnt/storage/etc/hosts
@@ -96,3 +92,17 @@ Edit `STATIC_STATIONS` array in worker.js — add any stream URL:
 
 **Weather not working**
 → Open-Meteo is free and needs no API key — check Worker logs in CF dashboard
+
+
+
+# SSH към Squeezebox — презапиши hosts файла чисто:
+cat > /mnt/storage/etc/hosts << 'EOF'
+127.0.0.1 localhost
+192.168.1.43 mysqueezebox.com
+192.168.1.43 www.mysqueezebox.com
+192.168.1.43 update.squeezenetwork.com
+EOF
+
+cat > /mnt/storage/etc/hosts << 'EOF'
+127.0.0.1 localhost
+EOF
