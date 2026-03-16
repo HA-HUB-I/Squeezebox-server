@@ -1,0 +1,20 @@
+name = "squeezecloud"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# KV namespace for caching radio stations
+# Create with: wrangler kv:namespace create "RADIO_KV"
+# Then replace the id below
+[[kv_namespaces]]
+binding = "RADIO_KV"
+id = "REPLACE_WITH_YOUR_KV_ID"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Routes — responds to mysqueezebox.com if you set up a custom domain
+# Otherwise use the default workers.dev subdomain
+# [[routes]]
+# pattern = "mysqueezebox.com/*"
+# zone_name = "yourdomain.com"
