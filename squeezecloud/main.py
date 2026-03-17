@@ -105,6 +105,63 @@ async def login(request: Request):
         "result": {
             "sn_version": CONFIG["version"],
             "playerid": mac,
+            "userId": 1,
+            "username": "squeezecloud",
+        }
+    }
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SESSION — устройството проверява сесията при всяко зареждане
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/v1/session")
+@app.get("/sn/api/v1/session")
+@app.get("/api/v1/account")
+async def session(request: Request):
+    mac = request.query_params.get("mac") or _device_mac
+    return {
+        "status": "ok",
+        "result": {
+            "userId": 1,
+            "username": "squeezecloud",
+            "sn_version": CONFIG["version"],
+            "playerid": mac,
+            "loggedIn": 1,
+        }
+    }
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DEVICE REGISTRATION
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/v1/deviceRegistration")
+@app.post("/api/v1/deviceRegistration")
+async def device_registration(request: Request):
+    mac = request.query_params.get("mac") or _device_mac
+    return {
+        "status": "ok",
+        "result": {
+            "registered": 1,
+            "playerid": mac,
+            "pin": False,
+        }
+    }
+
+# ═════════════════════════════════════════════════════════════════════════════
+# FIRMWARE — устройството проверява за обновления
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/v1/firmware")
+@app.get("/update/firmware")
+@app.get("/firmware/squeezeos/baby/firmware.xml")
+async def firmware_check(request: Request):
+    return {
+        "status": "ok",
+        "result": {
+            "firmwareVersion": "7.7.3",
+            "upgradeUrl": "",
+            "upgradeNeeded": 0,
+            "reset": 0,
         }
     }
 
@@ -369,6 +426,9 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
                 "rescan": 0,
                 "pin": False,
                 "info": "total_genres:0,total_artists:0,total_albums:0,total_songs:0",
+                # Полета за разпознаване от Jive firmware като SqueezeNetwork
+                "isSqueezenetwork": 1,
+                "sn_version": CONFIG["version"],
                 "players_loop": [{
                     "playerid": mac,
                     "name": "Squeezebox Radio",
@@ -454,6 +514,9 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
             "lastscan": int(time.time()),
             "rescan": 0,
             "pin": False,
+            # Полета за разпознаване от Jive firmware като SqueezeNetwork
+            "isSqueezenetwork": 1,
+            "sn_version": CONFIG["version"],
             "players_loop": [{
                 "playerid": mac,
                 "name": "Squeezebox Radio",
@@ -601,17 +664,13 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
 
     elif command == "register":
         # squeezeNetworkRequest очаква item_loop response за _browseSink
-        # Връщаме welcome item за да се счита за успешна регистрация
+        # pin: False сигнализира на Jive firmware че плейърът е вече свързан (не нужен PIN)
+        # Това тригерира notify_serverLinked → step9 → завършва setup без signup screen
         return {
-            "count": 1,
+            "count": 0,
             "pin": False,
             "registered": 1,
-            "item_loop": [{
-                "text": "Welcome to SqueezeCloud",
-                "id": "welcome",
-                "type": "text",
-                "isaudio": 0,
-            }],
+            "connected": 1,
         }
 
     elif command == "playerRegister":
@@ -623,6 +682,7 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
             "name": name,
             "pin": False,
             "registered": 1,
+            "connected": 1,
             "count": 0,
         }
 
@@ -632,14 +692,26 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
             "firmwareVersion": "7.7.3",
             "upgradeUrl": "",
             "upgradeNeeded": 0,
+            "reset": 0,
         }
 
+    elif command in ("favorites", "browseLibrary"):
+        # Любими станции — показваме статичните BG станции
+        start = int(cmd[1]) if len(cmd) > 1 else 0
+        count = int(cmd[2]) if len(cmd) > 2 else 10
+        slice_ = STATIC_STATIONS[start:start + count]
         return {
             "count": len(STATIC_STATIONS),
             "loop_loop": [
-                {"id": f"fav:{i}", "name": s["name"], "url": s["url"],
-                 "type": "audio", "isaudio": 1}
-                for i, s in enumerate(STATIC_STATIONS[:10])
+                {
+                    "id": f"fav:{start + i}",
+                    "text": s["name"],
+                    "url": s["url"],
+                    "type": "audio",
+                    "isaudio": 1,
+                    "hasitems": 0,
+                }
+                for i, s in enumerate(slice_)
             ]
         }
 
@@ -647,7 +719,7 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
         w = await fetch_weather()
         return {
             "count": 1,
-            "loop_loop": [{"id": "weather:current", "name": w["summary"], "type": "text", "isaudio": 0}]
+            "loop_loop": [{"id": "weather:current", "text": w["summary"], "type": "text", "isaudio": 0}]
         }
 
     elif command == "news":
@@ -655,7 +727,7 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
         return {
             "count": len(items),
             "loop_loop": [
-                {"id": f"news:{i}", "name": item["title"], "type": "text", "isaudio": 0}
+                {"id": f"news:{i}", "text": item["title"], "type": "text", "isaudio": 0}
                 for i, item in enumerate(items[:10])
             ]
         }
@@ -663,11 +735,11 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
     elif command == "apps":
         return {
             "count": 4,
-            "appss_loop": [
-                {"name": "Internet Radio", "cmd": "radios"},
-                {"name": "Podcasts",       "cmd": "podcasts"},
-                {"name": "Weather",        "cmd": "weather"},
-                {"name": "News",           "cmd": "news"},
+            "loop_loop": [
+                {"id": "radio",    "text": "Internet Radio", "cmd": "radios",   "type": "link"},
+                {"id": "podcasts", "text": "Podcasts",        "cmd": "podcasts", "type": "link"},
+                {"id": "weather",  "text": "Weather",         "cmd": "weather",  "type": "link"},
+                {"id": "news",     "text": "News",            "cmd": "news",     "type": "link"},
             ]
         }
 

@@ -26,6 +26,11 @@
 15. [SSH достъп](#15-ssh-достъп)
 16. [Инсталация и стартиране](#16-инсталация-и-стартиране)
 17. [Известни проблеми и TODO](#17-известни-проблеми-и-todo)
+18. [Анализ на файловете в репозиторито (File-by-File)](#18-анализ-на-файловете-в-репозиторито-file-by-file)
+19. [Signup Screen — Пълен анализ и решения](#19-signup-screen--пълен-анализ-и-решения)
+20. [Бързо валидиране (Quick Validation Checklist)](#20-бързо-валидиране-quick-validation-checklist)
+21. [Файлова система на устройството — подробен анализ](#21-файлова-система-на-устройството--подробен-анализ)
+22. [Работен процес при промени](#22-работен-процес-при-промени)
 
 ---
 
@@ -394,19 +399,20 @@ Squeezebox използва **Bayeux protocol** (имплементиран чр
 
 | Команда | Описание | Статус |
 |---------|----------|--------|
-| `serverstatus` | Статус на сървъра и свързани плейъри | ✅ |
+| `serverstatus` | Статус на сървъра — включва `isSqueezenetwork:1` | ✅ |
 | `players` | Списък на свързани устройства | ✅ |
 | `status` | Статус на конкретен плейър | ✅ |
 | `menu` | Главно навигационно меню | ✅ |
 | `radios` | Browse интернет радио станции | ✅ |
 | `podcasts` | Browse подкасти | ✅ |
-| `favorites` | Любими станции | ✅ |
+| `favorites` | Любими станции (от STATIC_STATIONS) | ✅ |
 | `weather` | Времето | ✅ |
 | `news` | Новини от RSS | ✅ |
 | `apps` | Списък приложения | ✅ |
-| `register` | Регистрация на service | ✅ |
+| `register` | Регистрация — `{pin:false, connected:1}` | ✅ |
 | `playerRegister` | Регистрация на плейър | ✅ |
-| `firmwareupgrade` | Firmware update check | ✅ |
+| `firmwareupgrade` | Firmware update check — `upgradeNeeded:0` | ✅ |
+| `browseLibrary` | Alias за favorites | ✅ |
 | `play` | Пускане | ✅ (stub) |
 | `pause` | Пауза | ✅ (stub) |
 | `mixer` | Volume control | ✅ (stub) |
@@ -768,22 +774,30 @@ sudo systemctl start squeezecloud
 |---------|--------|---------|
 | SlimProto `inactivity timeout` | 🔄 В процес | Keepalive добавен, нужно тестване |
 | `bogus timer` в SlimProto.lua | 🔄 В процес | Race condition при reconnect |
-| Меню без икони/имена | 🔄 В процес | Форматът на `item_loop` се уточнява |
+| Меню без икони | 🔄 В процес | Jive ползва собствени icon styles |
+| Unreachable `favorites` код | ✅ Фиксиран | Правилен `favorites` handler добавен |
+| `register` response format | ✅ Фиксиран | `{pin:false, connected:1}` |
+| `serverstatus` без SN полета | ✅ Фиксиран | `isSqueezenetwork:1` добавен |
+| `news`/`weather` items без `text` | ✅ Фиксиран | Всички items ползват `text` |
+| Липсващ `/api/v1/session` | ✅ Фиксиран | Добавен endpoint |
+| Липсващ `/api/v1/deviceRegistration` | ✅ Фиксиран | Добавен endpoint |
 | `playerRegister` response | ✅ Фиксиран | |
 | UDP discovery | ✅ Работи | |
 | Comet handshake | ✅ Работи | |
 
 ### TODO
 
-- [ ] Тестване на пълен menu browse flow
+- [ ] Тестване на пълен menu browse flow с реално устройство
 - [ ] Имплементация на playback control (реален stream redirect)
-- [ ] Favorites persistence (запазване между сесии)
+- [ ] Favorites persistence (запазване между сесии в JSON файл)
 - [ ] Volume control през SlimProto
 - [ ] Artwork/album art proxy
 - [ ] Web admin UI за управление на станции
 - [ ] Добавяне на повече BG радио станции
 - [ ] Интеграция с Home Assistant като media player entity
 - [ ] Разглеждане на community firmware 8.5.0 за пълна независимост
+- [x] Поправка на signup screen (сървърна страна)
+- [x] Lua патч за bypass на SN registration (`deploy_lua_patch.sh`)
 
 ### Ресурси
 
@@ -792,3 +806,415 @@ sudo systemctl start squeezecloud
 - [Open-Meteo](https://open-meteo.com) — безплатен weather API
 - [clach04/squeezebox_firmware_server](https://github.com/clach04/squeezebox_firmware_server) — reference implementation
 - [SlimProto specification](https://wiki.slimdevices.com/index.php/SlimProto_TCP_protocol) — официална документация
+
+
+---
+
+## 18. Анализ на файловете в репозиторито (File-by-File)
+
+Този раздел документира всеки файл в проекта — предназначение, структура, ключови части и как се валидира.
+
+---
+
+### 18.1 `squeezecloud/main.py` — Главният Python сървър
+
+**Размер:** ~1200 реда  
+**Роля:** Единственият сървърен файл. Имитира mysqueezebox.com локално.
+
+#### Основна структура (секции)
+
+| Редове | Секция | Описание |
+|--------|--------|----------|
+| 1–20 | Imports | FastAPI, asyncio, httpx, XML parser |
+| 21–32 | Cache | In-memory cache с TTL |
+| 34–35 | Global MAC | `_device_mac` — реалният MAC от HELO/Comet |
+| 37–44 | CONFIG | Сървърно наименование, версия, GPS координати |
+| 46–61 | STATIC_STATIONS | 13 вградени радио станции |
+| 63–72 | PODCAST_FEEDS | 7 подкаст RSS feed-а |
+| 74–81 | NEWS_FEEDS | 5 новинарски RSS feed-а |
+| 83–91 | FastAPI app | CORS middleware |
+| 93–168 | Auth/Login/Session | `/api/v1/login`, `/api/v1/session`, `/api/v1/deviceRegistration`, `/api/v1/firmware` |
+| 174–291 | Comet/Bayeux | POST/GET `/cometd` — handshake, connect, subscribe, reconnect |
+| 292–466 | `_handle_comet_message` | Обработва всички Bayeux канали |
+| 467–556 | JSON-RPC `/jsonrpc.js` | POST и GET endpoints |
+| 557–731 | `dispatch_rpc` | Обработва всички LMS команди |
+| 732–805 | Radio browse | GET `/api/v1/radios`, Radio Browser API |
+| 806–884 | Weather | GET `/api/v1/weather`, Open-Meteo |
+| 885–990 | News/Podcasts | GET `/api/v1/news`, `/api/v1/podcasts`, RSS parser |
+| 991–1083 | SlimProto TCP | `slim_handle_client`, `_slim_send` |
+| 1084–1136 | UDP Discovery | `slim_udp_discovery` |
+| 1137–1195 | Startup | `main()` — asyncio gather |
+
+#### Валидиране (quick checks)
+
+```bash
+# Синтаксис
+python3 -c "import ast; ast.parse(open('main.py').read()); print('OK')"
+
+# Стартиране в тест режим
+python main.py
+
+# В друг терминал — тест endpoints
+curl -s http://localhost:9000/ | python3 -m json.tool
+curl -s "http://localhost:9000/api/v1/login?mac=00:04:20:aa:bb:cc" | python3 -m json.tool
+curl -s "http://localhost:9000/api/v1/session" | python3 -m json.tool
+curl -s "http://localhost:9000/api/v1/time" | python3 -m json.tool
+
+# Тест JSON-RPC
+curl -s -X POST http://localhost:9000/jsonrpc.js \
+  -H "Content-Type: application/json" \
+  -d '{"id":1,"method":"slim.request","params":["",["serverstatus",0,50]]}' | python3 -m json.tool
+
+curl -s -X POST http://localhost:9000/jsonrpc.js \
+  -H "Content-Type: application/json" \
+  -d '{"id":2,"method":"slim.request","params":["00:04:20:aa:bb:cc",["menu",0,100,"direct:1"]]}' | python3 -m json.tool
+
+# Тест Comet handshake
+curl -s -X POST http://localhost:9000/cometd \
+  -H "Content-Type: application/json" \
+  -d '[{"channel":"/meta/handshake","version":"1.0","supportedConnectionTypes":["long-polling"]}]' | python3 -m json.tool
+```
+
+#### Известни проблеми (поправени)
+
+| Проблем | Статус | Поправка |
+|---------|--------|---------|
+| Unreachable код след `firmwareupgrade` return | ✅ Поправен | Добавен `favorites` handler |
+| `register` връщал `item_loop` вместо `connected:1` | ✅ Поправен | Нов отговор: `{count:0, pin:false, connected:1}` |
+| `serverstatus` без SN полета | ✅ Поправен | Добавени `isSqueezenetwork:1`, `sn_version` |
+| `news`/`weather` ползвали `name` вместо `text` | ✅ Поправен | Всички items ползват `text` |
+| Липсващ `/api/v1/session` endpoint | ✅ Поправен | Добавен |
+| Липсващ `/api/v1/deviceRegistration` | ✅ Поправен | Добавен |
+
+---
+
+### 18.2 `squeezecloud/SetupWelcomeApplet.lua.orig` — Оригинален Lua applet
+
+**Размер:** 615 реда  
+**Роля:** Оригиналният setup wizard на устройството. Управлява целия процес от включване до главното меню.
+
+#### Критично важни функции
+
+| Функция | Ред | Описание |
+|---------|-----|----------|
+| `startSetup(self)` | 65 | Входна точка при първи старт |
+| `step7(self)` | 227 | **Критичен** — след мрежов setup, опитва SN регистрация |
+| `_setupDone(self, setupDone, registerDone)` | 547 | Записва настройки `setupDone`/`registerDone` |
+| `_registerRequest(self, squeezenetwork)` | 447 | Изпраща `register service:SN` Comet заявка |
+| `notify_serverLinked(self, server, wasAlreadyLinked)` | 504 | **Критичен** — извиква `step9` при `pin == false` |
+| `_squeezenetworkConnected(self, squeezenetwork)` | 210 | Проверява SN статус |
+| `step9(self)` | 467 | Финализира setup, вика `jiveMain:goHome()` |
+
+#### Signup Screen — как се задейства
+
+```
+step7()
+  ↓
+_setupDone(true, false)   ← registerDone = false (НЕ регистриран)
+  ↓
+settings.registerDone?    ← false → продължава
+  ↓
+_registerRequest()        ← изпраща register service:SN
+  ↓
+[чака notify_serverLinked]
+  ↓
+notify_serverLinked()     ← ако server:getPin() == false → step9()
+  ↓
+step9()                   ← jiveMain:goHome() → Главно меню ✓
+```
+
+**Ако `notify_serverLinked` никога не се извика → устройството остава на signup screen!**
+
+---
+
+### 18.3 `squeezecloud/SetupWelcomeApplet.patched.lua` — Патчнатият applet
+
+**Размер:** 615 реда (идентичен с оригинала)  
+**Роля:** Пропуска SN регистрацията. Разликата е само на ред 231.
+
+#### Разлика (patch)
+
+```diff
+- self:_setupDone(true, false)
++ self:_setupDone(true, true)  -- SqueezeCloud patch: skip SN registration
+```
+
+#### Как работи патчът
+
+```
+step7()
+  ↓
+_setupDone(true, true)    ← registerDone = TRUE (вече "регистриран")
+  ↓
+settings.registerDone?    ← TRUE → влиза в if-блока
+  ↓
+_setupComplete(true)      ← setup завършен
+  ↓
+return                    ← ИЗЛИЗА → _registerRequest() НИКОГА не се вика
+  ↓
+Главно меню ✓             ← без signup screen!
+```
+
+#### Инсталиране на патча
+
+```bash
+# Бърза инсталация:
+bash squeezecloud/deploy_lua_patch.sh 192.168.1.72
+
+# Или ръчно:
+TARGET="/mnt/storage/usr/share/jive/applets/SetupWelcome/SetupWelcomeApplet.lua"
+scp -oKexAlgorithms=+diffie-hellman-group1-sha1 \
+    -oHostKeyAlgorithms=+ssh-rsa \
+    -oCiphers=+aes128-cbc \
+    -oMACs=+hmac-sha1 \
+    SetupWelcomeApplet.patched.lua root@192.168.1.72:"$TARGET"
+```
+
+---
+
+### 18.4 `squeezecloud/deploy_lua_patch.sh` — Скрипт за инсталиране
+
+**Роля:** Автоматизира инсталацията на SetupWelcomeApplet патча.
+
+```bash
+# Използване:
+bash deploy_lua_patch.sh <IP>
+bash deploy_lua_patch.sh 192.168.1.72
+```
+
+Стъпки:
+1. Проверява дали patch файлът съществува
+2. SSH → mkdir на target директорията
+3. SCP → копира патчнатия файл
+4. Проверява инсталацията
+5. Рестартира устройството
+
+---
+
+### 18.5 `squeezecloud/requirements.txt` — Python зависимости
+
+```
+fastapi>=0.110.0      # Web framework
+uvicorn[standard]     # ASGI сървър (asyncio)
+httpx>=0.27.0         # HTTP клиент за external APIs
+```
+
+**Инсталация:** `pip install -r requirements.txt`
+
+---
+
+### 18.6 `worker.js` — Cloudflare Worker версия
+
+**Размер:** ~709 реда  
+**Роля:** Алтернативна имплементация като Cloudflare Worker (edge функция).
+
+Когато нямаш постоянна машина в мрежата — деплойваш worker.js в Cloudflare и пренасочваш DNS на устройството към него.
+
+**Разлика от main.py:**
+- Работи в Cloudflare Edge network (v8 JavaScript runtime)
+- Ползва Cloudflare KV за кеш на радио станции
+- Няма TCP SlimProto — само HTTP endpoints
+- Достъпен от всяка мрежа (не само локална)
+
+**Ограничения:**
+- Без SlimProto TCP 3483 — устройството може да не се свърже правилно
+- Без UDP discovery — нужен hosts patch на устройството
+- Cloudflare free tier: 100,000 заявки/ден
+
+---
+
+## 19. Signup Screen — Пълен анализ и решения
+
+### Симптом
+
+Устройството стартира → свързва се с мрежата → показва **"mysqueezebox.com signup"** екран вместо главното меню.
+
+### Защо се появява signup screen (технически)
+
+```
+Jive firmware — step7() ─────────────────────────────────────────────
+               │
+               ▼ _setupDone(true, false) → registerDone=false
+               │
+               ▼ settings.registerDone? → false
+               │
+               ▼ _registerRequest(squeezenetwork)
+               │    └─ POST /cometd ["register", 0, 100, "service:SN"]
+               │
+               ▼ [чака notify_serverLinked callback]
+               │
+               ├─ Ако callback пристигне с server:getPin()==false:
+               │   └─ step9() → goHome() → ГЛАВНО МЕНЮ ✓
+               │
+               └─ Ако callback НЕ пристигне (сървърът не отговаря правилно):
+                   └─ [timeout/error] → SIGNUP SCREEN ✗
+```
+
+### Диагностика
+
+#### Стъпка 1: Проверете сервъра
+
+```bash
+# Работи ли сървърът?
+curl http://192.168.1.43:9000/
+
+# Правилен ли е register отговорът?
+curl -s -X POST http://192.168.1.43:9000/jsonrpc.js \
+  -H "Content-Type: application/json" \
+  -d '{"id":1,"method":"slim.request","params":["",["register",0,100,"service:SN"]]}'
+# Трябва: "pin":false, "connected":1
+
+# Правилен ли е serverstatus?
+curl -s -X POST http://192.168.1.43:9000/jsonrpc.js \
+  -H "Content-Type: application/json" \
+  -d '{"id":2,"method":"slim.request","params":["",["serverstatus",0,50]]}'
+# Трябва: "isSqueezenetwork":1, "pin":false
+```
+
+#### Стъпка 2: Проверете hosts файла
+
+```bash
+ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 \
+    -oHostKeyAlgorithms=+ssh-rsa \
+    -oCiphers=+aes128-cbc \
+    -oMACs=+hmac-sha1 \
+    root@192.168.1.72
+
+cat /mnt/storage/etc/hosts
+# Трябва: 192.168.1.43 mysqueezebox.com
+```
+
+#### Стъпка 3: Проверете Lua патча
+
+```bash
+cat /mnt/storage/usr/share/jive/applets/SetupWelcome/SetupWelcomeApplet.lua | grep "SqueezeCloud patch"
+# Трябва: -- SqueezeCloud patch: skip SN registration
+```
+
+#### Стъпка 4: Логове на устройството
+
+```bash
+tail -f /var/log/messages | grep -E "step[0-9]|register|SN|Comet"
+```
+
+### Решение A: Сървърни поправки (вече приложено)
+
+Актуализираният `main.py` вече:
+1. Връща `pin: false, connected: 1` при `register service:SN`
+2. Включва `isSqueezenetwork: 1` в `serverstatus`  
+3. Предоставя `/api/v1/session` и `/api/v1/deviceRegistration`
+
+**Рестартирай сървъра и устройството** → може да е достатъчно!
+
+### Решение B: Lua патч (за пълна надеждност)
+
+```bash
+bash squeezecloud/deploy_lua_patch.sh 192.168.1.72
+```
+
+---
+
+## 20. Бързо валидиране (Quick Validation Checklist)
+
+Използвай тези команди за бързо валидиране след промени:
+
+```bash
+cd squeezecloud && python main.py &
+sleep 2
+
+echo "=== AUTH ===" && curl -s "http://localhost:9000/api/v1/login?mac=00:04:20:aa:bb:cc" | python3 -m json.tool | grep -E "status|sn_version|userId"
+echo "=== SESSION ===" && curl -s "http://localhost:9000/api/v1/session" | python3 -m json.tool | grep -E "loggedIn|userId"
+echo "=== REGISTER ===" && curl -s -X POST http://localhost:9000/jsonrpc.js -H "Content-Type: application/json" -d '{"id":1,"method":"slim.request","params":["",["register",0,100,"service:SN"]]}' | python3 -m json.tool | grep -E "pin|connected"
+echo "=== SERVERSTATUS ===" && curl -s -X POST http://localhost:9000/jsonrpc.js -H "Content-Type: application/json" -d '{"id":2,"method":"slim.request","params":["",["serverstatus",0,50]]}' | python3 -m json.tool | grep -E "isSqueeze|pin"
+echo "=== MENU ===" && curl -s -X POST http://localhost:9000/jsonrpc.js -H "Content-Type: application/json" -d '{"id":3,"method":"slim.request","params":["aa:bb:cc",["menu",0,100]]}' | python3 -m json.tool | grep -E "count|text" | head -10
+echo "=== RADIOS ===" && curl -s http://localhost:9000/api/v1/radios | python3 -m json.tool | grep count
+echo "=== FAVORITES ===" && curl -s -X POST http://localhost:9000/jsonrpc.js -H "Content-Type: application/json" -d '{"id":4,"method":"slim.request","params":["aa:bb:cc",["favorites",0,5]]}' | python3 -m json.tool | grep -E "count|text" | head -5
+```
+
+---
+
+## 21. Файлова система на устройството — подробен анализ
+
+### `/usr/share/jive/` — Lua firmware (cramfs, read-only)
+
+```
+/usr/share/jive/
+├── jive/
+│   ├── net/
+│   │   ├── Comet.lua          ← Bayeux client (POST /cometd)
+│   │   ├── SlimProto.lua      ← TCP 3483 SlimProto client
+│   │   ├── Networking.lua     ← WiFi управление
+│   │   └── DNS.lua            ← DNS resolution
+│   ├── slim/
+│   │   ├── SlimServer.lua     ← Управлява сървърна връзка, isSqueezeNetwork()
+│   │   ├── LocalPlayer.lua    ← Локален плейър обект
+│   │   └── Player.lua         ← Абстрактен плейър
+│   └── ui/
+│       ├── Framework.lua      ← UI framework
+│       ├── SimpleMenu.lua     ← Менюта
+│       └── Window.lua         ← Прозорци
+└── applets/
+    ├── SetupWelcome/
+    │   └── SetupWelcomeApplet.lua  ← SETUP WIZARD (патчваме!)
+    ├── SlimBrowser/
+    │   └── SlimBrowserApplet.lua   ← Browse менюта
+    ├── NowPlaying/
+    │   └── NowPlayingApplet.lua    ← Now Playing
+    └── Settings/
+        └── SettingsApplet.lua      ← Настройки
+```
+
+### `/mnt/storage/` — Persistent storage (ubifs, rw)
+
+```
+/mnt/storage/
+├── etc/
+│   └── hosts              ← DNS override (ЗАДЪЛЖИТЕЛНО!)
+└── usr/share/jive/
+    └── applets/SetupWelcome/
+        └── SetupWelcomeApplet.lua  ← Нашият патч
+```
+
+### `/var/log/messages` — Логове
+
+```bash
+# Live логове от SSH:
+ssh ... root@192.168.1.72 "tail -f /var/log/messages"
+
+# Филтрирани:
+ssh ... root@192.168.1.72 "grep -E 'step[0-9]|register|SN|Comet' /var/log/messages | tail -50"
+```
+
+---
+
+## 22. Работен процес при промени
+
+### Промяна в `main.py`
+
+```bash
+# 1. Провери синтаксис
+python3 -c "import ast; ast.parse(open('squeezecloud/main.py').read()); print('OK')"
+
+# 2. Стартирай сървъра
+cd squeezecloud && python main.py
+
+# 3. В нов терминал — валидиране
+curl -s http://localhost:9000/ && echo "OK"
+
+# 4. Рестартирай устройството
+ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-rsa \
+    -oCiphers=+aes128-cbc -oMACs=+hmac-sha1 root@192.168.1.72 "reboot"
+```
+
+### Промяна в `SetupWelcomeApplet.patched.lua`
+
+```bash
+# 1. Редактирай patched версията
+nano squeezecloud/SetupWelcomeApplet.patched.lua
+
+# 2. Провери diff
+diff squeezecloud/SetupWelcomeApplet.lua.orig squeezecloud/SetupWelcomeApplet.patched.lua
+
+# 3. Деплой
+bash squeezecloud/deploy_lua_patch.sh 192.168.1.72
+```
