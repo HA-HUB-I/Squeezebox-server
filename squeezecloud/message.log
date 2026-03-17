@@ -1,0 +1,345 @@
+# cat /var/log/messages
+Jan  4 13:53:59 syslogd started: BusyBox v1.18.2
+Jan  4 13:53:59 root: udev/mount.sh [/dev/ram8] is blacklisted, ignoring
+Jan  4 13:53:59 root: udev/mount.sh [/dev/ram9] is blacklisted, ignoring
+Jan  4 13:53:59 kernel: klogd started: BusyBox v1.18.2 (2014-02-14 09:15:05 PST)
+Jan  4 13:53:59 kernel: [    0.000000] Linux version 2.6.26.8-rt16 (parabuild@ec2mbubld01.idc.logitech.com) (gcc version 4.4.1 (Sourcery G++ Lite 2010q1-202) ) #1 PREEMPT RT Fri Feb 14 09:02:51 PST 2014
+Jan  4 13:53:59 kernel: [    0.000000] CPU: ARM926EJ-S [41069264] revision 4 (ARMv5TEJ), cr=00053177
+Jan  4 13:53:59 kernel: [    0.000000] Machine: Logitech MX25 Baby Board
+Jan  4 13:53:59 kernel: [    0.000000] Memory policy: ECC disabled, Data cache writeback
+Jan  4 13:53:59 kernel: [    0.000000] On node 0 totalpages: 16384
+Jan  4 13:53:59 kernel: [    0.000000]   DMA zone: 48 pages used for memmap
+Jan  4 13:53:59 kernel: [    0.000000]   DMA zone: 0 pages reserved
+Jan  4 13:53:59 kernel: [    0.000000]   DMA zone: 6096 pages, LIFO batch:0
+Jan  4 13:53:59 kernel: [    0.000000]   Normal zone: 80 pages used for memmap
+Jan  4 13:53:59 kernel: [    0.000000]   Normal zone: 10160 pages, LIFO batch:1
+Jan  4 13:53:59 kernel: [    0.000000]   Movable zone: 0 pages used for memmap
+Jan  4 13:53:59 kernel: [    0.000000] CPU0: D VIVT write-back cache
+Jan  4 13:53:59 kernel: [    0.000000] CPU0: I cache: 16384 bytes, associativity 4, 32 byte lines, 128 sets
+Jan  4 13:53:59 kernel: [    0.000000] CPU0: D cache: 16384 bytes, associativity 4, 32 byte lines, 128 sets
+Jan  4 13:53:59 kernel: [    0.000000] Real-Time Preemption Support (C) 2004-2007 Ingo Molnar
+Jan  4 13:53:59 kernel: [    0.000000] Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 16256
+Jan  4 13:53:59 kernel: [    0.000000] Kernel command line: console=ttymxc1,115200 noinitrd init=/linuxrc ubi.mtd=1 root=/dev/mtdblock:cramfs
+Jan  4 13:53:59 kernel: [    0.000000] Preemptible RCU implementation.
+Jan  4 13:53:59 kernel: [    0.000000] MXC IRQ initialized
+Jan  4 13:53:59 kernel: [    0.000000] PID hash table entries: 256 (order: 8, 1024 bytes)
+Jan  4 13:53:59 kernel: [    0.000000] MXC GPT timer initialized, rate = 12000000
+Jan  4 13:53:59 kernel: [    0.000000] WARNING: Clock divider has been truncated, clock error 333 [ps] per 83 [ns]
+Jan  4 13:53:59 kernel: [    0.000000] Console: colour dummy device 80x30
+Jan  4 13:53:59 kernel: [    0.000000] Dentry cache hash table entries: 8192 (order: 3, 32768 bytes)
+Jan  4 13:53:59 kernel: [    0.000000] Inode-cache hash table entries: 4096 (order: 2, 16384 bytes)
+Jan  4 13:53:59 kernel: [    0.000000] Memory: 64MB = 64MB total
+Jan  4 13:53:59 kernel: [    0.000000] Memory: 61992KB available (2564K code, 248K data, 120K init)
+Jan  4 13:53:59 kernel: [    0.000000] Calibrating delay loop... 359.62 BogoMIPS (lpj=1798144)
+Jan  4 13:53:59 kernel: [    0.000000] Mount-cache hash table entries: 512
+Jan  4 13:53:59 kernel: [    0.000000] CPU: Testing write buffer coherency: ok
+Jan  4 13:53:59 kernel: [    0.000000] net_namespace: 276 bytes
+Jan  4 13:53:59 kernel: [    0.000000] NET: Registered protocol family 16
+Jan  4 13:53:59 kernel: [    0.000000] AIPS1 VA base: 0xfc000000
+Jan  4 13:53:59 kernel: [    0.000000] CPU is i.MX0 Revision 0.7
+Jan  4 13:53:59 kernel: [    0.000000] Clock input source is 24000000
+Jan  4 13:53:59 kernel: [    0.000000] MXC GPIO hardware
+Jan  4 13:53:59 kernel: [    0.000000] Using SDMA I.API
+Jan  4 13:53:59 kernel: [    0.000000] MXC DMA API initialized
+Jan  4 13:53:59 kernel: [    0.000000]  epit_clk: 66500000
+Jan  4 13:53:59 kernel: [    0.000000]  per_epit_clk: 66500000
+Jan  4 13:53:59 kernel: [    0.000000]  ahb_clk: 133000000
+Jan  4 13:53:59 kernel: [    0.000000]  cpu_clk: 399000000
+Jan  4 13:53:59 kernel: [    0.000000]  mpll: 532000000
+Jan  4 13:53:59 kernel: [    0.000000]  osc24m: 24000000
+Jan  4 13:53:59 kernel: [    0.000139] MXC EPIT timer initialized, rate = 16625000 4
+Jan  4 13:53:59 kernel: [    0.029600] MXC I2C driver
+Jan  4 13:53:59 kernel: [    0.032172] MXC I2C driver
+Jan  4 13:53:59 kernel: [    0.036464] ASoC version 0.20
+Jan  4 13:53:59 kernel: [    0.131234] NET: Registered protocol family 1
+Jan  4 13:53:59 kernel: [    0.134005] Bus freq driver module loaded
+Jan  4 13:53:59 kernel: [    0.138221] krcupreemptd setsched 0
+Jan  4 13:53:59 kernel: [    0.138259]   prio = 98
+Jan  4 13:53:59 kernel: [    0.140926] Registering unionfs 2.5.1 (for 2.6.26.8)
+Jan  4 13:53:59 kernel: [    0.141776] msgmni has been set to 121
+Jan  4 13:53:59 kernel: [    0.142107] io scheduler noop registered
+Jan  4 13:53:59 kernel: [    0.142148] io scheduler anticipatory registered
+Jan  4 13:53:59 kernel: [    0.142176] io scheduler deadline registered
+Jan  4 13:53:59 kernel: [    0.142384] io scheduler cfq registered (default)
+Jan  4 13:53:59 kernel: [    0.146960] **** baby_lcd_spi_init
+Jan  4 13:53:59 kernel: [    0.379214] Console: switching to colour frame buffer device 30x40
+Jan  4 13:53:59 kernel: [    0.385045] mxc_sdc_fb mxc_sdc_fb.0: fb0: DISP0 BG fb device registered successfully.
+Jan  4 13:53:59 kernel: [    0.389911] mxc_sdc_fb mxc_sdc_fb.0: fb1: DISP0 FG fb device registered successfully.
+Jan  4 13:53:59 kernel: [    0.393110] MXC Backlight Device mxc_lcdc_bl.0 Initialized.
+Jan  4 13:53:59 kernel: [    0.468093] Serial: MXC Internal UART driver
+Jan  4 13:53:59 kernel: [    0.468497] mxcintuart.1: ttymxc1 at MMIO 0x43f94000 (irq = 32) is a Freescale MXC
+Jan  4 13:53:59 kernel: [    0.468608] console [ttymxc1] enabled
+Jan  4 13:53:59 kernel: [    0.799836] brd: module loaded
+Jan  4 13:53:59 kernel: [    0.823289] loop: module loaded
+Jan  4 13:53:59 kernel: [    0.826520] FEC ENET Version 0.2
+Jan  4 13:53:59 kernel: [    0.831781] fec: PHY @ 0x1, ID 0x001cc815 -- RTL8201E
+Jan  4 13:53:59 kernel: [    0.838811] eth0: ethernet 00:04:20:2c:90:b1
+Jan  4 13:53:59 kernel: [    0.844836] MXC MTD nand Driver 2.5
+Jan  4 13:53:59 kernel: [    0.849739] NAND device: Manufacturer ID: 0xec, Chip ID: 0xf1 (Samsung NAND 128MiB 3,3V 8-bit)
+Jan  4 13:53:59 kernel: [    0.859015] Bad block table found at page 65472, version 0x01
+Jan  4 13:53:59 kernel: [    0.859456] Bad block table found at page 65408, version 0x01
+Jan  4 13:53:59 kernel: [    0.859705] nand_read_bbt: Bad block at 0x00da0000
+Jan  4 13:53:59 kernel: [    0.859748] nand_read_bbt: Bad block at 0x02b60000
+Jan  4 13:53:59 kernel: [    0.859793] nand_read_bbt: Bad block at 0x05fa0000
+Jan  4 13:53:59 kernel: [    0.859828] nand_read_bbt: Bad block at 0x07d20000
+Jan  4 13:53:59 kernel: [    0.860316] Searching for RedBoot partition table in NAND 128MiB 3,3V 8-bit at offset 0x7f60000
+Jan  4 13:53:59 kernel: [    0.881218] No RedBoot partition table detected in NAND 128MiB 3,3V 8-bit
+Jan  4 13:53:59 kernel: [    0.888315] Creating 2 MTD partitions on "NAND 128MiB 3,3V 8-bit":
+Jan  4 13:53:59 kernel: [    0.894581] 0x00000000-0x00080000 : "redboot"
+Jan  4 13:53:59 kernel: [    0.904136] 0x00080000-0x07f40000 : "ubi"
+Jan  4 13:53:59 kernel: [    0.915932] UBI: attaching mtd1 to ubi0
+Jan  4 13:53:59 kernel: [    0.919818] UBI: physical eraseblock size:   131072 bytes (128 KiB)
+Jan  4 13:53:59 kernel: [    0.926144] UBI: logical eraseblock size:    129024 bytes
+Jan  4 13:53:59 kernel: [    0.931587] UBI: smallest flash I/O unit:    2048
+Jan  4 13:53:59 kernel: [    0.936323] UBI: sub-page size:              512
+Jan  4 13:53:59 kernel: [    0.940981] UBI: VID header offset:          512 (aligned 512)
+Jan  4 13:53:59 kernel: [    0.946849] UBI: data offset:                2048
+Jan  4 13:53:59 kernel: [    1.203657] UBI: attached mtd1 to ubi0
+Jan  4 13:53:59 kernel: [    1.207451] UBI: MTD device name:            "ubi"
+Jan  4 13:53:59 kernel: [    1.212286] UBI: MTD device size:            126 MiB
+Jan  4 13:53:59 kernel: [    1.217281] UBI: number of good PEBs:        1010
+Jan  4 13:53:59 kernel: [    1.222019] UBI: number of bad PEBs:         4
+Jan  4 13:53:59 kernel: [    1.226493] UBI: max. allowed volumes:       128
+Jan  4 13:53:59 kernel: [    1.231147] UBI: wear-leveling threshold:    4096
+Jan  4 13:53:59 kernel: [    1.235885] UBI: number of internal volumes: 1
+Jan  4 13:53:59 kernel: [    1.240349] UBI: number of user volumes:     5
+Jan  4 13:53:59 kernel: [    1.244827] UBI: available PEBs:             647
+Jan  4 13:53:59 kernel: [    1.249474] UBI: total number of reserved PEBs: 363
+Jan  4 13:53:59 kernel: [    1.254383] UBI: number of PEBs reserved for bad PEB handling: 10
+Jan  4 13:53:59 kernel: [    1.260511] UBI: max/mean erase counter: 19/11
+Jan  4 13:53:59 kernel: [    1.265020] UBI: background thread "ubi_bgt0d" started, PID 280
+Jan  4 13:53:59 kernel: [    1.273293] mice: PS/2 mouse device common for all mice
+Jan  4 13:53:59 kernel: [    1.278581] MXC keypad loaded
+Jan  4 13:53:59 kernel: [    1.283269] input: mxckpd as /class/input/input0
+Jan  4 13:53:59 kernel: [    1.331102] eth0: status: link up, 100MBit Full Duplex, auto-negotiation complete.
+Jan  4 13:53:59 watchdog[691]: starting daemon (5.6):
+Jan  4 13:53:59 kernel: [    1.338802] eth0: enable RMII gasket
+Jan  4 13:53:59 kernel: [    1.493643] MXC WatchDog Driver 2.0
+Jan  4 13:53:59 kernel: [    1.498554] MXC Watchdog # 0 Timer: initial timeout 60 sec
+Jan  4 13:53:59 kernel: [    1.511366] input: front panel as /class/input/input1
+Jan  4 13:53:59 kernel: [    1.734828] input: msp430 as /class/input/input2
+Jan  4 13:53:59 kernel: [    1.853428] msp430 1-0010: rtc core: registered msp430 as rtc0
+Jan  4 13:53:59 kernel: [    1.865009] i.MX ADC at 0x50030000 irq 46
+Jan  4 13:53:59 kernel: [    1.870139] mxsdhci: MXC Secure Digital Host Controller Interface driver
+Jan  4 13:53:59 kernel: [    1.877092] mxsdhci: MXC SDHCI Controller Driver.
+Jan  4 13:53:59 kernel: [    1.920855] mmc0: SDHCI detect irq 0 irq 9 PIO
+Jan  4 13:53:59 kernel: [    1.971617] Advanced Linux Sound Architecture Driver Version 1.0.16.
+Jan  4 13:53:59 kernel: [    2.082401] AIC3104 Audio Codec 0.1<6>DMA Sound Buffers Allocated:UseIram=1 buf->addr=78001000 buf->area=c4860000 size=65536
+Jan  4 13:53:59 kernel: [    2.095253] DMA Sound Buffers Allocated:UseIram=1 buf->addr=83e10000 buf->area=fde97000 size=65536
+Jan  4 13:53:59 kernel: [    2.104278] asoc: aic3104-dai <-> imx-ssi-1 mapping ok
+Jan  4 13:53:59 watchdog[691]: int=5s realtime=yes sync=no soft=no mla=0 mem=0 semkey=1234
+Jan  4 13:53:59 watchdog[691]: ping: no machine to check
+Jan  4 13:53:59 watchdog[691]: file: no file to check
+Jan  4 13:53:59 watchdog[691]: pidfile: /var/run/squeezeplay.pid
+Jan  4 13:53:59 watchdog[691]: pidfile: /var/run/monitor_msp430.pid
+Jan  4 13:53:59 watchdog[691]: interface: no interface to check
+Jan  4 13:53:59 watchdog[691]: test=none(0) repair=/usr/sbin/repair.sh alive=/dev/watchdog heartbeat=none temp=none to=noone no_act=no
+Jan  4 13:53:59 kernel: [    2.157264] mmc0: queuing CIS tuple 0x01 length 3
+Jan  4 13:53:59 kernel: [    2.168454] mmc0: queuing CIS tuple 0x1a length 5
+Jan  4 13:53:59 kernel: [    2.173808] mmc0: queuing CIS tuple 0x1b length 8
+Jan  4 13:53:59 kernel: [    2.174742] mmc0: queuing CIS tuple 0x14 length 0
+Jan  4 13:53:59 kernel: [    2.270988] ALSA device list:
+Jan  4 13:53:59 kernel: [    2.274002]   #0: baby (aic3104)
+Jan  4 13:53:59 kernel: [    2.277252] oprofile: using timer interrupt.
+Jan  4 13:53:59 kernel: [    2.282424] NET: Registered protocol family 2
+Jan  4 13:53:59 kernel: [    2.389493] mmc0: queuing CIS tuple 0x80 length 1
+Jan  4 13:53:59 kernel: [    2.389975] mmc0: queuing CIS tuple 0x81 length 1
+Jan  4 13:53:59 kernel: [    2.390450] mmc0: queuing CIS tuple 0x82 length 1
+Jan  4 13:53:59 kernel: [    2.390658] mmc0: new SDIO card at address 0001
+Jan  4 13:53:59 kernel: [    2.611894] IP route cache hash table entries: 1024 (order: 0, 4096 bytes)
+Jan  4 13:53:59 kernel: [    2.624769] TCP established hash table entries: 2048 (order: 2, 16384 bytes)
+Jan  4 13:53:59 kernel: [    2.632824] TCP bind hash table entries: 2048 (order: 3, 57344 bytes)
+Jan  4 13:53:59 kernel: [    2.640990] TCP: Hash tables configured (established 2048 bind 2048)
+Jan  4 13:53:59 kernel: [    2.647387] TCP reno registered
+Jan  4 13:53:59 kernel: [    2.765912] TCP cubic registered
+Jan  4 13:53:59 kernel: [    2.769207] NET: Registered protocol family 17
+Jan  4 13:53:59 kernel: [    2.785483] msp430 1-0010: setting system clock to 1970-01-04 13:53:48 UTC (309228)
+Jan  4 13:53:59 kernel: [    2.799872] VFS: Mounted root (cramfs filesystem) readonly.
+Jan  4 13:53:59 kernel: [    2.806330] Freeing init memory: 120K
+Jan  4 13:53:59 kernel: [    3.913659] UBIFS: recovery needed
+Jan  4 13:53:59 kernel: [    3.952273] UBIFS: recovery completed
+Jan  4 13:53:59 kernel: [    3.956013] UBIFS: mounted UBI device 0, volume 2, name "ubifs"
+Jan  4 13:53:59 kernel: [    3.961996] UBIFS: file system size:   9418752 bytes (9198 KiB, 8 MiB, 73 LEBs)
+Jan  4 13:53:59 kernel: [    3.969352] UBIFS: journal size:       1032193 bytes (1008 KiB, 0 MiB, 6 LEBs)
+Jan  4 13:53:59 kernel: [    3.976726] UBIFS: media format:       w4/r0 (latest is w4/r0)
+Jan  4 13:53:59 kernel: [    3.982609] UBIFS: default compressor: lzo
+Jan  4 13:53:59 kernel: [    3.986750] UBIFS: reserved for root:  444870 bytes (434 KiB)
+Jan  4 13:53:59 kernel: [   13.573691] Requesting msp430 firmware msp430-0007.txt(version 0.1)
+Jan  4 13:53:59 kernel: [   13.580008] firmware: requesting msp430-0007.txt
+Jan  4 13:53:59 kernel: [   13.783149] msp430: firmware ok (1598)
+Jan  4 13:53:59 root: No bootloader for board: 0007
+Jan  4 13:54:00 root: wlan: starting
+Jan  4 13:54:02 kernel: [   16.564724] AR6000 Reg Code = 0x40000060
+Jan  4 13:54:02 root: Starting wpa_supplicant
+Jan  4 13:54:04 root: Started wpa_supplicant
+Jan  4 13:54:04 root: wlan started
+Jan  4 13:54:04 kernel: [   19.186634] eth0: enable RMII gasket
+Jan  4 13:54:04 kernel: [   19.202461] eth0: config: auto-negotiation on, 100FDX, 100HDX, 10FDX, 10HDX.
+Jan  4 13:54:05 udhcpc[769]: udhcpc (v1.18.2) started
+Jan  4 13:54:05 kernel: [   19.331366] eth0: status: link down.
+Jan  4 13:54:05 root: udhcpc_action eth0 deconfig ip=
+Jan  4 13:54:05 udhcpc[769]: Sending discover...
+Jan  4 13:54:07 kernel: [   21.331200] eth0: status: link up, 100MBit Full Duplex, auto-negotiation complete.
+Jan  4 13:54:07 kernel: [   21.338926] eth0: enable RMII gasket
+Jan  4 13:54:07 squeezeplay: INFO   squeezeplay - JiveMain.lua:265 SqueezePlay version 7.7.3 r16676
+Jan  4 13:54:08 squeezeplay: INFO   squeezeplay.ui.draw - jiveL_initSDL:181 240,320 16 bits/pixel 2 bytes/pixel [R<<11 G<<5 B<<0]
+Jan  4 13:54:08 squeezeplay: INFO   squeezeplay.ui.draw - jiveL_initSDL:182 Hardware acceleration is available
+Jan  4 13:54:08 squeezeplay: INFO   squeezeplay.ui.draw - jive_surface_set_video_mode:878 Using a hardware double buffer
+Jan  4 13:54:08 udhcpc[769]: Sending discover...
+Jan  4 13:54:08 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:91 User Path: /etc/squeezeplay/userpath
+Jan  4 13:54:09 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupSoundEffects
+Jan  4 13:54:10 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SqueezeboxBaby
+Jan  4 13:54:11 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SqueezeboxBaby
+Jan  4 13:54:11 udhcpc[769]: Sending discover...
+Jan  4 13:54:12 squeezeplay: INFO   applet.Squeezebox - SqueezeboxApplet.lua:193 unclean reboot
+Jan  4 13:54:12 udhcpc[769]: Sending select for 192.168.1.72...
+Jan  4 13:54:12 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Shortcuts
+Jan  4 13:54:12 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: AboutJive
+Jan  4 13:54:12 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: AlarmSnooze
+Jan  4 13:54:12 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: BlankScreen
+Jan  4 13:54:12 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: ChooseMusicSource
+Jan  4 13:54:13 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Clock
+Jan  4 13:54:13 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: CrashLog
+Jan  4 13:54:13 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: CustomizeHomeMenu
+Jan  4 13:54:13 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: DebugSkin
+Jan  4 13:54:13 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: DebugTouch
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Diagnostics
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Experiments
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: HttpAuth
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: ImageViewer
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: InfoBrowser
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: LineIn
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: LogSettings
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: MacroPlay
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: NowPlaying
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Playback
+Jan  4 13:54:14 udhcpc[769]: Lease of 192.168.1.72 obtained, lease time 1800
+Jan  4 13:54:14 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: QVGAbaseSkin
+Jan  4 13:54:15 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: QVGAlandscapeSkin
+Jan  4 13:54:15 root: udhcpc_action eth0 bound ip=192.168.1.72
+Jan  4 13:54:15 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: ScreenSavers
+Jan  4 13:54:15 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Screenshot
+Jan  4 13:54:15 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SelectPlayer
+Jan  4 13:54:15 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SelectSkin
+Jan  4 13:54:16 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupAppletInstaller
+Jan  4 13:54:16 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupDateTime
+Jan  4 13:54:16 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupFactoryReset
+Jan  4 13:54:16 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupFirmwareUpgrade
+Jan  4 13:54:16 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupLanguage
+Jan  4 13:54:16 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupNetTest
+Jan  4 13:54:16 dropbear[796]: Child connection from 192.168.1.43:53543
+Jan  4 13:54:18 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupNetworking
+Jan  4 13:54:18 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupSSH
+Jan  4 13:54:18 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupSqueezebox
+Jan  4 13:54:19 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupTZ
+Jan  4 13:54:19 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupWallpaper
+Jan  4 13:54:19 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SetupWelcome
+Jan  4 13:54:20 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SlimBrowser
+Jan  4 13:54:20 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SlimDiscovery
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SlimMenus
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Spotify
+Jan  4 13:54:21 squeezeplay: INFO   audio.decode - Playback.lua:1288 registering handler spotify
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: SqueezeNetworkPIN
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: TestAmbient
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: TestAudioRouting
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: TestDisplay
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: TestKeypad
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: TestTones
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: UdapControl
+Jan  4 13:54:21 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:317 Registering: Demo
+Jan  4 13:54:23 squeezeplay: INFO   squeezeplay - JiveMain.lua:585 select skin: QVGAlandscapeSkin
+Jan  4 13:54:25 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SetupAppletInstaller
+Jan  4 13:54:26 squeezeplay: INFO   applet.SlimDiscovery - SlimDiscoveryApplet.lua:632 selected nil
+Jan  4 13:54:26 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:306 notify_playerCurrent(LocalPlayer {nil})
+Jan  4 13:54:26 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1162 SlimMenusApplet:notify_playerCurrent(LocalPlayer {nil})
+Jan  4 13:54:26 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1194 player changed from:false to LocalPlayer {nil} but server not yet present
+Jan  4 13:54:26 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1230 No server, Fetching initial server, SlimServer {mysqueezebox.com}
+Jan  4 13:54:26 squeezeplay: INFO   applet.SetupWelcome - SetupWelcomeApplet.lua:228 step7
+Jan  4 13:54:26 squeezeplay: INFO   applet.SetupWelcome - SetupWelcomeApplet.lua:548 network setup complete
+Jan  4 13:54:26 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SetupWelcome
+Jan  4 13:54:26 squeezeplay: INFO   applet.SetupWelcome - SetupWelcomeApplet.lua:459 registration on SN
+Jan  4 13:54:26 squeezeplay: WARN   squeezebox.server - SlimServer.lua:679 wakeOnLan(): SKIPPING WOL, self.mac: nil, self:isSqueezeNetwork(): true
+Jan  4 13:54:26 squeezeplay: INFO   squeezebox.server - SlimServer.lua:789 disconnected mysqueezebox.com idleTimeoutTriggered: nil
+Jan  4 13:54:26 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:379 notify_serverDisconnected: SlimServer {mysqueezebox.com} is now disconnected
+Jan  4 13:54:26 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:392 notify_serverDisconnected: SlimServer {mysqueezebox.com} - disconnected, but no server alarm in progress : nil
+Jan  4 13:54:26 squeezeplay: WARN   applet.SlimBrowser - SlimBrowserApplet.lua:3084 notify_networkOrServerNotOK()
+Jan  4 13:54:26 squeezeplay: WARN   applet.SlimBrowser - SlimBrowserApplet.lua:3089 this is a server error
+Jan  4 13:54:26 squeezeplay: WARN   applet.SlimMenus - SlimMenusApplet.lua:188 notify_networkOrServerNotOK
+Jan  4 13:54:26 squeezeplay: INFO   applet.SlimBrowser - SlimBrowserApplet.lua:3161 _problemConnectingPopupInternal
+Jan  4 13:54:26 squeezeplay: WARN   squeezebox.server - SlimServer.lua:679 wakeOnLan(): SKIPPING WOL, self.mac: nil, self:isSqueezeNetwork(): true
+Jan  4 13:54:26 dropbear[796]: password auth succeeded for 'root' from 192.168.1.43:53543
+Jan  4 13:54:26 dropbear[801]: lastlog_perform_login: Couldn't stat /var/log/lastlog: No such file or directory
+Jan  4 13:54:26 dropbear[801]: lastlog_openseek: /var/log/lastlog is not a file or directory!
+Jan  4 13:54:26 squeezeplay: INFO   squeezebox.server - SlimServer.lua:765 connected mysqueezebox.com
+Jan  4 13:54:26 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:360 notify_serverConnected: SlimServer {mysqueezebox.com} is now connected
+Jan  4 13:54:26 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:363 local player connection status is false
+Jan  4 13:54:27 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:54:27 squeezeplay: INFO   applet.SlimDiscovery - SlimDiscoveryApplet.lua:453 connected Squeezebox Radio
+Jan  4 13:54:27 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:54:27 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:306 notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:54:27 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1162 SlimMenusApplet:notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:54:27 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1245 player changed from:false to LocalPlayer {Squeezebox Radio} for server: SlimServer {mysqueezebox.com} from server: SlimServer {mysqueezebox.com}
+Jan  4 13:54:27 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1253
+Jan  4 13:54:27 squeezeplay: Subscribing to /slim/menustatus/
+Jan  4 13:54:27 squeezeplay: 00:04:20:2c:90:b1
+Jan  4 13:54:27 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:333 notify_playerConnected: LocalPlayer {Squeezebox Radio} nil
+Jan  4 13:54:27 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:336 notify_playerConnected(): setting self.server to: SlimServer {mysqueezebox.com}
+Jan  4 13:54:27 squeezeplay: INFO   applet.SetupWelcome - SetupWelcomeApplet.lua:505 notify_serverLinked: SlimServer {mysqueezebox.com}
+Jan  4 13:54:27 squeezeplay: INFO   squeezebox.server - SlimServer.lua:370 Firmware URL: nil
+Jan  4 13:54:27 squeezeplay: INFO   squeezebox.server - SlimServer.lua:387 mysqueezebox.com firmware=nil force=false
+Jan  4 13:54:27 squeezeplay: INFO   applet.SlimBrowser - SlimBrowserApplet.lua:2971 Calling successCallback after initial SN request succeeded
+Jan  4 13:54:27 squeezeplay: INFO   squeezebox.server - SlimServer.lua:777 self.mac being set to---->nil
+Jan  4 13:54:27 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:502 _menuSink(5) SlimServer {mysqueezebox.com} menuDirective: nil isCurrentServer:true
+Jan  4 13:54:27 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:802 hiding any 'connecting to server' popup after menu response from current server, SlimServer {mysqueezebox.com}
+Jan  4 13:54:28 squeezeplay: INFO   applet.ChooseMusicSource - ChooseMusicSourceApplet.lua:543 Hiding popup, exists?: nil
+Jan  4 13:54:28 squeezeplay: INFO   squeezeplay - JiveMain.lua:445 Calling postOnScreenInits callback
+Jan  4 13:54:28 squeezeplay: INFO   squeezeplay - JiveMain.lua:445 Calling postOnScreenInits callback
+Jan  4 13:54:28 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:54:28 squeezeplay: INFO   applet.SlimDiscovery - SlimDiscoveryApplet.lua:517 notify_playerPower: false
+Jan  4 13:54:28 squeezeplay: INFO   squeezeplay - JiveMain.lua:200 Turn soft power off
+Jan  4 13:54:29 squeezeplay: WARN   applet.Clock - ClockApplet.lua:873 This device does not seem to have the right time: Sun Jan  4 13:54:29 1970
+Jan  4 13:54:29 squeezeplay: INFO   applet.ScreenSavers - ScreenSaversApplet.lua:292 activating Clock screensaver
+Jan  4 13:54:29 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:348 notify_playerDisconnected LocalPlayer {nil}nil
+Jan  4 13:54:29 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:323 notify_playerModeChange: - audioState is 0
+Jan  4 13:54:33 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: Playback
+Jan  4 13:54:37 squeezeplay: WARN   net.thread - NetworkThread.lua:146 network thread timeout for Task(SocketHttp {tzguess}(W))
+Jan  4 13:54:37 squeezeplay: ERROR  net.http - SocketHttp.lua:375 SocketHttp {tzguess}:t_sendRequest.pump: inactivity timeout
+Jan  4 13:54:37 squeezeplay: stack traceback:
+Jan  4 13:54:37 squeezeplay:    /usr/share/jive/jive/net/SocketHttp.lua:375: in function 'pump'
+Jan  4 13:54:37 squeezeplay:    /usr/share/jive/jive/net/SocketTcp.lua:200: in function 'writePump'
+Jan  4 13:54:37 squeezeplay:    /usr/share/jive/jive/net/Socket.lua:186: in function </usr/share/jive/jive/net/Socket.lua:184>
+Jan  4 13:54:56 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:54:57 squeezeplay: INFO   applet.SlimDiscovery - SlimDiscoveryApplet.lua:453 connected Squeezebox Radio
+Jan  4 13:54:57 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:54:57 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:306 notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:54:57 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1162 SlimMenusApplet:notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:54:57 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:333 notify_playerConnected: LocalPlayer {Squeezebox Radio} nil
+Jan  4 13:54:57 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:336 notify_playerConnected(): setting self.server to: SlimServer {mysqueezebox.com}
+Jan  4 13:54:57 squeezeplay: INFO   squeezebox.server - SlimServer.lua:370 Firmware URL: nil
+Jan  4 13:54:57 squeezeplay: INFO   squeezebox.server - SlimServer.lua:387 mysqueezebox.com firmware=nil force=false
+Jan  4 13:54:57 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:54:57 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:348 notify_playerDisconnected LocalPlayer {nil}nil
+Jan  4 13:55:26 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:55:26 squeezeplay: INFO   applet.SlimDiscovery - SlimDiscoveryApplet.lua:453 connected Squeezebox Radio
+Jan  4 13:55:27 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:55:27 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:306 notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:55:27 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1162 SlimMenusApplet:notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:55:27 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:333 notify_playerConnected: LocalPlayer {Squeezebox Radio} nil
+Jan  4 13:55:27 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:336 notify_playerConnected(): setting self.server to: SlimServer {mysqueezebox.com}
+Jan  4 13:55:27 squeezeplay: INFO   squeezebox.server - SlimServer.lua:370 Firmware URL: nil
+Jan  4 13:55:27 squeezeplay: INFO   squeezebox.server - SlimServer.lua:387 mysqueezebox.com firmware=nil force=false
+Jan  4 13:55:27 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:55:27 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:348 notify_playerDisconnected LocalPlayer {nil}nil
+Jan  4 13:55:27 squeezeplay: WARN   applet.ScreenSavers - ScreenSaversApplet.lua:276 Clock is not set properly, so fallback to blank screen SS
+Jan  4 13:55:27 squeezeplay: INFO   applet.ScreenSavers - ScreenSaversApplet.lua:292 activating BlankScreen screensaver
+Jan  4 13:55:56 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:55:57 squeezeplay: INFO   applet.SlimDiscovery - SlimDiscoveryApplet.lua:453 connected Squeezebox Radio
+Jan  4 13:55:57 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:55:57 squeezeplay: INFO   applet.AlarmSnooze - AlarmSnoozeApplet.lua:306 notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:55:57 squeezeplay: INFO   applet.SlimMenus - SlimMenusApplet.lua:1162 SlimMenusApplet:notify_playerCurrent(LocalPlayer {Squeezebox Radio})
+Jan  4 13:55:57 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:333 notify_playerConnected: LocalPlayer {Squeezebox Radio} nil
+Jan  4 13:55:57 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:336 notify_playerConnected(): setting self.server to: SlimServer {mysqueezebox.com}
+Jan  4 13:55:57 squeezeplay: INFO   squeezebox.server - SlimServer.lua:370 Firmware URL: nil
+Jan  4 13:55:57 squeezeplay: INFO   squeezebox.server - SlimServer.lua:387 mysqueezebox.com firmware=nil force=false
+Jan  4 13:55:57 squeezeplay: INFO   squeezeplay.applets - AppletManager.lua:708 store settings: SlimDiscovery
+Jan  4 13:55:57 squeezeplay: WARN   applet.AlarmSnooze - AlarmSnoozeApplet.lua:348 notify_playerDisconnected LocalPlayer {nil}nil
