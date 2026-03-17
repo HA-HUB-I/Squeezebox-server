@@ -1,400 +1,78 @@
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39931 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39932 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39933 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39934 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39935 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39936 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:39937 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:39938 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39939 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:39940 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}       
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}    
-INFO:     192.168.1.72:38117 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:38118 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:38119 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:38120 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/af7e5deb/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/af7e5deb/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/af7e5deb/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:38121 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
+[Discovery] UDP 3483 слуша за broadcasts...
+INFO:     Started server process [15452]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+[Slim] TCP 3483 слуша...
+INFO:     Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)
 [Comet] ← /meta/handshake | data={}
 [Comet] MAC от handshake: 00:04:20:2c:90:b1
-[Comet] → /meta/handshake | resp={"channel": "/meta/handshake", "version": "1.0", "minimumVersion": "1.0", "supportedConnectionTypes": ["long-polling", "streaming"], "clientId": "a7de3575", "successful": true, "advice": {"timeout": 6
-INFO:     192.168.1.72:53364 - "POST /cometd HTTP/1.1" 200 OK
+[Comet] → /meta/handshake | resp={"channel": "/meta/handshake", "version": "1.0", "minimumVersion": "1.0", "supportedConnectionTypes": ["long-polling", "streaming"], "clientId": "679e1085", "successful": true, "advice": {"timeout": 6
+INFO:     192.168.1.72:50425 - "POST /cometd HTTP/1.1" 200 OK
 [Comet] ← /meta/connect | data={}
 [Comet] ← /meta/subscribe | data={}
-[Comet] → /meta/connect | resp={"channel": "/meta/connect", "clientId": "a7de3575", "successful": true, "timestamp": "2026-03-17T20:18:46", "advice": {"timeout": 60000, "interval": 0, "reconnect": "retry"}}
-[Comet] → /meta/subscribe | resp={"channel": "/meta/subscribe", "clientId": "a7de3575", "subscription": "/a7de3575/**", "successful": true}
-INFO:     192.168.1.72:53364 - "POST /cometd HTTP/1.1" 200 OK
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/a7de3575/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/a7de3575/slim/firmwarestatus"}
-[Comet] ← /slim/request | data={"request": ["", ["register", 0, 100, "service:SN"]], "response": "/a7de3575/slim/request"}
+[Comet] → /meta/connect | resp={"channel": "/meta/connect", "clientId": "679e1085", "successful": true, "timestamp": "2026-03-17T21:21:56", "advice": {"timeout": 60000, "interval": 0, "reconnect": "retry"}}
+[Comet] → /meta/subscribe | resp={"channel": "/meta/subscribe", "clientId": "679e1085", "subscription": "/679e1085/**", "successful": true}
+INFO:     192.168.1.72:50425 - "POST /cometd HTTP/1.1" 200 OK
+[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/679e1085/slim/serverstatus"}
+[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/679e1085/slim/firmwarestatus"}
+[Comet] ← /slim/request | data={"request": ["", ["register", 0, 100, "service:SN"]], "response": "/679e1085/slim/request"}
 [serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/request | resp={"channel": "/a7de3575/slim/request", "clientId": "", "successful": true, "data": {"count": 0, "pin": false, "registered": 1, "connected": 1}, "id": 3}
-INFO:     192.168.1.72:53365 - "POST /cometd HTTP/1.1" 200 OK
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:53365 - "POST /cometd HTTP/1.1" 200 OK
-[Comet] ← /slim/request | data={"request": ["00:04:20:2c:90:b1", ["menu", 0, 100, "direct:1"]], "response": "/a7de3575/slim/request"}
-[Comet] → /slim/request | resp={"channel": "/a7de3575/slim/request", "clientId": "", "successful": true, "data": {"count": 5, "item_loop": [{"id": "favorites", "node": "home", "text": "Favorites", "iconStyle": "hm_favorites", "weig
-INFO:     192.168.1.72:53365 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/request | data={"request": ["00:04:20:2c:90:b1", ["status", 0, 200, "menu:menu", "useContextMenu:1"]], "response": "/a7de3575/slim/request"}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/request | resp={"channel": "/a7de3575/slim/request", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 50, "playlist_cur_index"
-INFO:     192.168.1.72:53365 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
+[Comet] → /slim/request | resp={"channel": "/679e1085/slim/request", "clientId": "", "successful": true, "data": {"count": 0, "pin": false, "registered": 1, "connected": 1}, "id": 3}
+INFO:     192.168.1.72:50426 - "POST /cometd HTTP/1.1" 200 OK
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/679e1085/slim/menustatus/00:04:20:2c:90:b1"}
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
+INFO:     192.168.1.72:50426 - "POST /cometd HTTP/1.1" 200 OK
+[Comet] ← /slim/request | data={"request": ["00:04:20:2c:90:b1", ["menu", 0, 100, "direct:1"]], "response": "/679e1085/slim/request"}
+[Comet] → /slim/request | resp={"channel": "/679e1085/slim/request", "clientId": "", "successful": true, "data": {"count": 5, "item_loop": [{"id": "favorites", "node": "home", "text": "Favorites", "iconStyle": "hm_favorites", "weig
+INFO:     192.168.1.72:50426 - "POST /cometd HTTP/1.1" 200 OK
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/679e1085/slim/playerstatus/00:04:20:2c:90:b1"}
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/679e1085/slim/displaystatus/00:04:20:2c:90:b1"}
+[Comet] ← /slim/request | data={"request": ["00:04:20:2c:90:b1", ["status", 0, 200, "menu:menu", "useContextMenu:1"]], "response": "/679e1085/slim/request"}
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
+[Comet] → /slim/request | resp={"channel": "/679e1085/slim/request", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 50, "playlist_cur_index"
+INFO:     192.168.1.72:50426 - "POST /cometd HTTP/1.1" 200 OK
 [Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
 [Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
 [Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
 [Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
 [Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
 [Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/a7de3575/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/a7de3575/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1"}
+[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
+[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
+[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
+[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
+[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/679e1085/slim/serverstatus"}
+[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/679e1085/slim/firmwarestatus"}
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/679e1085/slim/menustatus/00:04:20:2c:90:b1"}
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/679e1085/slim/playerstatus/00:04:20:2c:90:b1"}
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/679e1085/slim/displaystatus/00:04:20:2c:90:b1"}
 [serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:53367 - "POST /cometd HTTP/1.1" 200 OK
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
+INFO:     192.168.1.72:50428 - "POST /cometd HTTP/1.1" 200 OK
 [Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
 [Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
 [Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
 [Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
 [Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
 [Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/a7de3575/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/a7de3575/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1"}
+[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/679e1085/slim/serverstatus"}
+[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/679e1085/slim/firmwarestatus"}
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/679e1085/slim/menustatus/00:04:20:2c:90:b1"}
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/679e1085/slim/playerstatus/00:04:20:2c:90:b1"}
+[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/679e1085/slim/displaystatus/00:04:20:2c:90:b1"}
 [serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:53368 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.67: b'eIPAD\x00NAME\x00JSON\x00UUID\x00VERS'
-[Discovery] ✓ Отговорено на 192.168.1.67 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/a7de3575/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/a7de3575/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:53369 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Comet] ← /slim/subscribe | data={"request": ["", ["serverstatus", 0, 50, "subscribe:60"]], "response": "/a7de3575/slim/serverstatus"}
-[Comet] ← /slim/subscribe | data={"request": ["", ["firmwareupgrade", "firmwareVersion:7.7.3 r16676", "inSetup:0", "machine:baby", "subscribe:0"]], "response": "/a7de3575/slim/firmwarestatus"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["menustatus"]], "response": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["status", "-", 10, "menu:menu", "useContextMenu:1", "subscribe:600"]], "response": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1"}
-[Comet] ← /slim/subscribe | data={"request": ["00:04:20:2c:90:b1", ["displaystatus", "subscribe:showbriefly"]], "response": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1"}
-[serverstatus] via subscribe, mac=00:04:20:2c:90:b1
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
-[Comet] → /slim/subscribe | resp={"channel": "/a7de3575/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
-INFO:     192.168.1.72:53370 - "POST /cometd HTTP/1.1" 200 OK
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
-[Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
-[Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/serverstatus", "clientId": "", "successful": true, "data": {"version": "8.5.0", "server_name": "SqueezeCloud", "uuid": "squeezecloud-local-v1", "player count": 1, "lastscan
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/firmwarestatus", "clientId": "", "successful": true, "data": {"firmwareVersion": "7.7.3", "upgradeUrl": "", "upgradeNeeded": 0, "reset": 0}}
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/menustatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/playerstatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"playerid": "00:04:20:2c:90:b1", "name": "Squeezebox Radio", "mode": "stop", "mixer_volume": 5
+[Comet] → /slim/subscribe | resp={"channel": "/679e1085/slim/displaystatus/00:04:20:2c:90:b1", "clientId": "", "successful": true, "data": {"ok": 1, "count": 0}}
+INFO:     192.168.1.72:50429 - "POST /cometd HTTP/1.1" 200 OK
 [Discovery] Broadcast от 192.168.1.72: b'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID'
 [Discovery] ✓ Отговорено на 192.168.1.72 → SqueezeCloud @ 192.168.1.43:9000
