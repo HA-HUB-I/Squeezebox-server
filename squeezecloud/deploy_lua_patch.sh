@@ -33,12 +33,6 @@ SSH_OPTS="-oKexAlgorithms=+diffie-hellman-group1-sha1 \
           -oStrictHostKeyChecking=no \
           -o ConnectTimeout=10"
 
-SCP_OPTS="-oKexAlgorithms=+diffie-hellman-group1-sha1 \
-          -oHostKeyAlgorithms=+ssh-rsa \
-          -oCiphers=+aes128-cbc \
-          -oMACs=+hmac-sha1 \
-          -oStrictHostKeyChecking=no"
-
 TARGET_DIR="/mnt/storage/usr/share/jive/applets/SetupWelcome"
 TARGET_FILE="$TARGET_DIR/SetupWelcomeApplet.lua"
 
@@ -47,7 +41,7 @@ echo "1. Създаване на директорията на устройст�
 ssh $SSH_OPTS root@"$SQUEEZEBOX_IP" "mkdir -p $TARGET_DIR" 2>/dev/null || true
 
 echo "2. Копиране на патчнатия файл..."
-scp $SCP_OPTS "$PATCH_FILE" root@"$SQUEEZEBOX_IP":"$TARGET_FILE"
+ssh $SSH_OPTS root@"$SQUEEZEBOX_IP" "cat > $TARGET_FILE" < "$PATCH_FILE"
 
 echo "3. Проверка..."
 ssh $SSH_OPTS root@"$SQUEEZEBOX_IP" "grep 'SqueezeCloud patch' $TARGET_FILE && echo 'Патчът е инсталиран успешно!'"
