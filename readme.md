@@ -39,14 +39,31 @@ dig +short squeezecloud.YOUR_SUBDOMAIN.workers.dev
 nslookup squeezecloud.YOUR_SUBDOMAIN.workers.dev
 ```
 
-### 5. Patch Squeezebox hosts file (permanent!)
+### 5. Deploy Lua patch + auto-patch hosts file (една команда!)
+```bash
+# Синтаксис: bash deploy_lua_patch.sh <IP_НА_SQUEEZEBOX> [IP_НА_СЪРВЪРА]
+cd squeezecloud
+bash deploy_lua_patch.sh 192.168.1.72 192.168.1.43
+```
+
+Скриптът автоматично:
+1. Пренасочва `mysqueezebox.com`, `www.mysqueezebox.com` и `update.squeezenetwork.com`
+   към SqueezeCloud сървъра в `/mnt/storage/etc/hosts` на устройството.
+2. Инсталира patched `SetupWelcomeApplet.lua` (пропуска signup screen).
+3. Рестартира устройството.
+
+#### Ръчна промяна на hosts (алтернативно)
 ```bash
 ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-rsa -oCiphers=+aes128-cbc -oMACs=+hmac-sha1 root@192.168.1.72
 
 # On the device:
-echo "WORKER_IP mysqueezebox.com" >> /mnt/storage/etc/hosts
-echo "WORKER_IP www.mysqueezebox.com" >> /mnt/storage/etc/hosts  
-echo "WORKER_IP update.squeezenetwork.com" >> /mnt/storage/etc/hosts
+cat > /mnt/storage/etc/hosts << 'EOF'
+127.0.0.1 localhost
+192.168.1.43 mysqueezebox.com
+192.168.1.43 www.mysqueezebox.com
+192.168.1.43 update.squeezenetwork.com
+EOF
+sync
 
 # Verify:
 cat /mnt/storage/etc/hosts
@@ -83,8 +100,10 @@ Edit `STATIC_STATIONS` array in worker.js — add any stream URL:
 
 ## Troubleshooting
 
-**Device still shows "DNS failed"**
-→ Check hosts file: `cat /mnt/storage/etc/hosts`
+**Device still shows signup screen / "DNS failed"**
+→ Re-run the deploy script — it will patch both Lua and hosts automatically:
+  `bash deploy_lua_patch.sh 192.168.1.72 192.168.1.43`
+→ Or verify hosts file manually: `cat /mnt/storage/etc/hosts`
 → Flush DNS on device: reboot
 
 **No radio stations showing**
@@ -92,17 +111,3 @@ Edit `STATIC_STATIONS` array in worker.js — add any stream URL:
 
 **Weather not working**
 → Open-Meteo is free and needs no API key — check Worker logs in CF dashboard
-
-
-
-# SSH към Squeezebox — презапиши hosts файла чисто:
-cat > /mnt/storage/etc/hosts << 'EOF'
-127.0.0.1 localhost
-192.168.1.43 mysqueezebox.com
-192.168.1.43 www.mysqueezebox.com
-192.168.1.43 update.squeezenetwork.com
-EOF
-
-cat > /mnt/storage/etc/hosts << 'EOF'
-127.0.0.1 localhost
-EOF
