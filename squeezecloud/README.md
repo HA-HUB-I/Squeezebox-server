@@ -15,11 +15,8 @@ python main.py
 
 ```bash
 # SSH към Squeezebox:
-ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 \
-    -oHostKeyAlgorithms=+ssh-rsa \
-    -oCiphers=+aes128-cbc \
-    -oMACs=+hmac-sha1 \
-    root@192.168.1.72
+ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-rsa -oCiphers=+aes128-cbc -oMACs=+hmac-sha1 root@192.168.1.72
+
 
 # На устройството (смени LOCAL_IP с IP-то от стартовия екран):
 echo "LOCAL_IP mysqueezebox.com" >> /mnt/storage/etc/hosts
