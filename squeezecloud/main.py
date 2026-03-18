@@ -663,11 +663,23 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
         }
 
     elif command == "register":
-        # squeezeNetworkRequest очаква item_loop response за _browseSink
-        # pin: False сигнализира на Jive firmware че плейърът е вече свързан (не нужен PIN)
-        # Това тригерира notify_serverLinked → step9 → завършва setup без signup screen
+        # Отговаряме с goNow="home" за да накараме Jive браузъра да се прехвърли
+        # директно към началния екран без потребителско взаимодействие.
+        # item_loop с nextWindow="home" и serverLinked=1 осигурява резервен вариант:
+        # ако goNow не работи, потребителят вижда бутон "Connected" и може да го натисне.
+        # pin: False сигнализира на SlimServer.lua че плейърът е вече свързан (не е нужен PIN низ).
         return {
-            "count": 0,
+            "count": 1,
+            "offset": 0,
+            "item_loop": [
+                {
+                    "text": "Connected to SqueezeCloud",
+                    "nextWindow": "home",
+                    "serverLinked": 1,
+                    "style": "item",
+                }
+            ],
+            "goNow": "home",
             "pin": False,
             "registered": 1,
             "connected": 1,

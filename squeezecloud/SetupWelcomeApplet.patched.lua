@@ -227,48 +227,11 @@ end
 function step7(self)
 	log:info("step7")
 
-	-- Once here, network setup is complete
-	self:_setupDone(true, true)  -- SqueezeCloud patch: skip SN registration
-
-	-- Bug 12786: Selecting a Network, then backing out
-	--  and re-selecting will cause network errors
-	self.registerRequest = false
-
-	--might be coming into this from a restart, so re-disable
-	self:_disableNormalEscapeMechanisms()
-	self:_addReturnToSetupToHomeMenu()
-
-	-- Find squeezenetwork server
-	local squeezenetwork = false
-	for name, server in slimServer:iterate() do
-		if server:isSqueezeNetwork() then
-			squeezenetwork = server
-		end
-	end
-
-	if not squeezenetwork then
-		log:error("no SqueezeNetwork instance")
-		self:_setupComplete(true)
-		return
-	end
-
-	local settings = self:getSettings()
-	if settings.registerDone then
-		log:error("SqueezeNetwork registration complete")
-
-		local player = appletManager:callService("getCurrentPlayer")
-		log:info("connecting ", player, " to ", squeezenetwork)
-		player:connectToServer(squeezenetwork)
-
-		self:_setupComplete(true)
-		return
-	end
-
-	if UPGRADE_FROM_SCS_ENABLED then
-		_squeezenetworkWait(self, squeezenetwork)
-	else
-		self:_registerRequest(squeezenetwork)
-	end
+	-- SqueezeCloud patch: mark setup and registration as complete, then go home
+	-- immediately.  This prevents _registerRequest from being called, which would
+	-- open the undismissible "My Squeezebox" signup window.
+	self:_setupDone(true, true)
+	self:_setupComplete(true)
 end
 
 
