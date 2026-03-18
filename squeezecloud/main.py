@@ -6,12 +6,21 @@ SqueezeCloud — локален сървър имитиращ mysqueezebox.com
 
 import asyncio
 import json
+import logging
 import socket
 import time
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("squeezecloud")
 
 import httpx
 from fastapi import FastAPI, Request, Query
@@ -241,7 +250,7 @@ async def cometd(request: Request):
     for msg in messages:
         ch = msg.get("channel", "?")
         data = msg.get("data", {})
-        print(f"[Comet] ← {ch} | data={json.dumps(data)[:200]}")
+        log.debug("[Comet] ← %s | data=%s", ch, json.dumps(data)[:200])
 
     responses = []
     is_connect = any(m.get("channel") in ("/meta/connect", "/meta/reconnect") for m in messages)
@@ -255,7 +264,7 @@ async def cometd(request: Request):
         resp = await _handle_comet_message(msg, channel)
         if resp:
             responses.append(resp)
-            print(f"[Comet] → {channel} | resp={json.dumps(resp)[:200]}")
+            log.debug("[Comet] → %s | resp=%s", channel, json.dumps(resp)[:200])
 
     if is_connect:
         client_id = next(
@@ -292,7 +301,7 @@ async def cometd(request: Request):
 
 @app.get("/cometd")
 async def cometd_get(request: Request):
-    print(f"[Comet] GET /cometd от {request.client}")
+    log.debug("[Comet] GET /cometd от %s", request.client)
     return JSONResponse([{"channel": "/meta/connect", "successful": True}])
 
 
@@ -306,7 +315,7 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
         if ext.get("mac"):
             global _device_mac
             _device_mac = ext["mac"]
-            print(f"[Comet] MAC от handshake: {_device_mac}")
+            log.info("[Comet] MAC от handshake: %s", _device_mac)
         return {
             "channel": "/meta/handshake",
             "version": "1.0",
@@ -416,7 +425,7 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
         if command == "serverstatus":
             # Винаги използваме реалния MAC от HELO — никога не го hardcode-ваме
             mac = _device_mac
-            print(f"[serverstatus] via subscribe, mac={mac}")
+            log.debug("[serverstatus] via subscribe, mac=%s", mac)
             result = {
                 "version": CONFIG["version"],
                 "server_name": CONFIG["server_name"],
@@ -484,7 +493,7 @@ async def jsonrpc(request: Request):
     cmd = params[1] if len(params) > 1 else []
     command = cmd[0] if cmd else ""
 
-    print(f"[RPC] mac={player_mac} cmd={cmd}")
+    log.debug("[RPC] mac=%s cmd=%s", player_mac, cmd)
 
     result = await dispatch_rpc(command, cmd, player_mac)
 
@@ -498,7 +507,7 @@ async def catch_all(request: Request, path: str):
         body = await request.json()
     except Exception:
         body = {}
-    print(f"[???] {request.method} /{path} | body={json.dumps(body)[:300]}")
+    log.debug("[???] %s /%s | body=%s", request.method, path, json.dumps(body)[:300])
     return JSONResponse({"status": "ok", "result": []})
 
 
@@ -572,7 +581,7 @@ def _home_menu_items() -> list:
 async def dispatch_rpc(command: str, cmd: list, player_mac: str):
     if command == "serverstatus":
         mac = _device_mac
-        print(f"[serverstatus] via dispatch, mac={mac}")
+        log.debug("[serverstatus] via dispatch, mac=%s", mac)
         return {
             "version": CONFIG["version"],
             "server_name": CONFIG["server_name"],
@@ -633,8 +642,6 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                     "type": "audio",
                     "url": s["url"],
                     "isaudio": 1,
-                    "hasitems": 0,
-                    "icon": "",
                 }
                 for i, s in enumerate(slice_)
             ]
@@ -651,7 +658,7 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                 "offset": 0,
                 "item_loop": [
                     {"id": f"podcast:{i}", "text": f["name"], "type": "playlist",
-                     "isaudio": 0, "hasitems": 1, "item_id": f"podcast:{i}"}
+                     "hasitems": 1, "item_id": f"podcast:{i}"}
                     for i, f in enumerate(PODCAST_FEEDS)
                 ]
             }
@@ -745,7 +752,6 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                     "url": s["url"],
                     "type": "audio",
                     "isaudio": 1,
-                    "hasitems": 0,
                 }
                 for i, s in enumerate(slice_)
             ]
@@ -756,7 +762,7 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
         return {
             "count": 1,
             "offset": 0,
-            "item_loop": [{"id": "weather:current", "text": w["summary"], "type": "text", "isaudio": 0}]
+            "item_loop": [{"id": "weather:current", "text": w["summary"], "type": "text"}]
         }
 
     elif command == "news":
@@ -765,7 +771,7 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
             "count": len(items),
             "offset": 0,
             "item_loop": [
-                {"id": f"news:{i}", "text": item["title"], "type": "text", "isaudio": 0}
+                {"id": f"news:{i}", "text": item["title"], "type": "text"}
                 for i, item in enumerate(items[:10])
             ]
         }
@@ -844,7 +850,7 @@ async def get_radio_stations() -> list:
                     if s.get("url_resolved") and s.get("name")
                 ]
     except Exception as e:
-        print(f"Radio Browser API error: {e}")
+        log.warning("Radio Browser API error: %s", e)
 
     all_stations = STATIC_STATIONS + live
     cache_set("stations:all", all_stations)
@@ -955,7 +961,7 @@ async def fetch_news_items(feed: dict) -> list:
             cache_set(f"news:{feed['url']}", items)
             return items
     except Exception as e:
-        print(f"News fetch error: {e}")
+        log.warning("News fetch error: %s", e)
         return [{"title": "Неуспешно зареждане", "url": "", "description": ""}]
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -982,7 +988,7 @@ async def fetch_podcast_episodes(feed: dict) -> list:
             cache_set(f"podcast:{feed['url']}", episodes)
             return episodes
     except Exception as e:
-        print(f"Podcast fetch error: {e}")
+        log.warning("Podcast fetch error: %s", e)
         return []
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1046,7 +1052,7 @@ def _clean(text: str) -> str:
 
 async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     addr = writer.get_extra_info("peername")
-    print(f"[Slim] Свързан: {addr}")
+    log.info("[Slim] Свързан: %s", addr)
     keepalive_task = None
 
     async def send_keepalive():
@@ -1068,12 +1074,12 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
             if length > 0:
                 body = await asyncio.wait_for(reader.readexactly(length), timeout=10)
 
-            print(f"[Slim] OP={op!r} len={length}")
+            log.debug("[Slim] OP=%r len=%d", op, length)
 
             if op == "HELO":
                 if len(body) >= 8:
                     mac = ":".join(f"{b:02x}" for b in body[2:8])
-                    print(f"[Slim] HELO от MAC={mac}")
+                    log.info("[Slim] HELO от MAC=%s", mac)
                     # Запази реалния MAC глобално
                     global _device_mac
                     _device_mac = mac
@@ -1084,7 +1090,7 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
                 version = CONFIG["version"].encode("utf-8")
                 _slim_send(writer, b"vers", version)
                 await writer.drain()
-                print(f"[Slim] ✓ HELO → само vers (без serv)")
+                log.debug("[Slim] ✓ HELO → само vers (без serv)")
 
                 # Стартирай keepalive
                 if keepalive_task is None:
@@ -1092,25 +1098,25 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
 
             elif op == "STAT":
                 event = body[0:4].decode("ascii", errors="ignore") if len(body) >= 4 else "????"
-                print(f"[Slim] STAT event={event!r}")
+                log.debug("[Slim] STAT event=%r", event)
                 # Не отговаряме — просто държим връзката жива
 
             elif op == "BYE!":
-                print(f"[Slim] BYE от {addr}")
+                log.info("[Slim] BYE от %s", addr)
                 break
 
             elif op in ("IR  ", "RESP", "BODY", "META", "BUTN"):
                 pass
 
             else:
-                print(f"[Slim] Непознат OP={op!r}")
+                log.debug("[Slim] Непознат OP=%r", op)
 
     except asyncio.IncompleteReadError:
         pass
     except (asyncio.TimeoutError, ConnectionResetError, BrokenPipeError):
         pass
     except Exception as e:
-        print(f"[Slim] Грешка: {e}")
+        log.error("[Slim] Грешка: %s", e)
     finally:
         if keepalive_task:
             keepalive_task.cancel()
@@ -1118,7 +1124,7 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
             writer.close()
         except Exception:
             pass
-        print(f"[Slim] Разкачен: {addr}")
+        log.info("[Slim] Разкачен: %s", addr)
 
 
 def _slim_send(writer: asyncio.StreamWriter, cmd: bytes, data: bytes):
@@ -1134,7 +1140,7 @@ def _slim_send(writer: asyncio.StreamWriter, cmd: bytes, data: bytes):
 
 async def start_slim_server():
     server = await asyncio.start_server(slim_handle_client, "0.0.0.0", 3483)
-    print("[Slim] TCP 3483 слуша...")
+    log.info("[Slim] TCP 3483 слуша...")
     async with server:
         await server.serve_forever()
 
@@ -1159,7 +1165,7 @@ async def slim_udp_discovery(local_ip: str):
     sock.bind(("0.0.0.0", 3483))
     sock.setblocking(False)
 
-    print(f"[Discovery] UDP 3483 слуша за broadcasts...")
+    log.info("[Discovery] UDP 3483 слуша за broadcasts...")
 
     name = CONFIG["server_name"].encode("utf-8")
     ip   = local_ip.encode("utf-8")
@@ -1170,17 +1176,17 @@ async def slim_udp_discovery(local_ip: str):
     while True:
         try:
             data, addr = await loop.run_in_executor(None, sock.recvfrom, 1024)
-            print(f"[Discovery] Broadcast от {addr[0]}: {data[:30]}")
+            log.debug("[Discovery] Broadcast от %s: %s", addr[0], data[:30])
 
             # Squeezebox изпраща 'e' за discovery request
             if data and data[0:1] in (b"e", b"E", b"d"):
                 sock.sendto(response, addr)
-                print(f"[Discovery] ✓ Отговорено на {addr[0]} → {CONFIG['server_name']} @ {local_ip}:9000")
+                log.info("[Discovery] ✓ Отговорено на %s → %s @ %s:9000", addr[0], CONFIG['server_name'], local_ip)
 
         except BlockingIOError:
             await asyncio.sleep(0.05)
         except Exception as e:
-            print(f"[Discovery] Грешка: {e}")
+            log.error("[Discovery] Грешка: %s", e)
             await asyncio.sleep(1)
 
 

@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+<!--
+  SqueezeCloud — Custom Plugin Repository
+  ========================================
+  Качи този файл на публично достъпен URL и добави го в LMS:
+    Settings → Plugins → Additional Repositories → Add URL
+
+  Структура:
+    <extensions>
+      <details>   — описание на репото
+      <plugins>   — LMS сървърни плъгини (Perl)
+      <patches>   — Firmware Lua патчове за плейъри
+      <applets>   — Jive/SqueezePlay Lua аплети (за Radio/Touch)
+    </extensions>
+
+  Всеки <plugin>/<patch>/<applet> задължително трябва да има:
+    name        — уникален идентификатор (без интервали)
+    version     — семантична версия "X.Y.Z"
+    minTarget   — минимална версия на LMS (напр. "7.9.0" или "8.0")
+    maxTarget   — максимална версия ("*" = всички)
+    url         — директен HTTP/HTTPS линк към .zip файла
+    sha         — SHA1 хеш на zip файла (sha1sum file.zip)
+
+  За <patch> — допълнителен атрибут:
+    target      — "baby" (Radio) | "fab4" (Touch) | "squeezeplay" (desktop)
+
+  Пример за генериране на sha1:
+    sha1sum MyPlugin-1.0.0.zip
+-->
+
+<extensions>
+
+  <!-- ── Описание на репото ─────────────────────────────────────────── -->
+  <details>
+    <title lang="BG">Моето SqueezeCloud Репо</title>
+    <title lang="EN">My SqueezeCloud Repository</title>
+  </details>
+
+  <!-- ── LMS сървърни плъгини (Perl) ───────────────────────────────── -->
+  <plugins>
+
+    <!--
+      Пример: Прост плъгин за показване на информация
+      Замени всички стойности с реалните за твоя плъгин.
+    -->
+    <plugin name="MyPlugin" version="1.0.0" minTarget="8.0" maxTarget="*">
+      <title lang="BG">Моят плъгин</title>
+      <title lang="EN">My Plugin</title>
+      <desc lang="BG">Описание на плъгина на български.</desc>
+      <desc lang="EN">Description of the plugin in English.</desc>
+      <changes lang="EN">v1.0.0: Initial release.</changes>
+      <category>information</category>
+      <!-- Качи .zip файла с плъгина на твой сървър или GitHub Releases -->
+      <url>https://YOUR_SERVER/plugins/MyPlugin-1.0.0.zip</url>
+      <!-- Опционален линк към документация -->
+      <link>https://YOUR_SERVER/myplugin/</link>
+      <!-- Опционална иконка (SVG или PNG, ~64×64px) -->
+      <icon>https://YOUR_SERVER/icons/myplugin.svg</icon>
+      <creator>Your Name</creator>
+      <email>you@example.com</email>
+      <!-- SHA1 на zip файла: sha1sum MyPlugin-1.0.0.zip -->
+      <sha>0000000000000000000000000000000000000000</sha>
+    </plugin>
+
+    <!--
+      Пример: Плъгин само за Unix (target атрибут)
+      Валидни target стойности: "unix" | "win" | "mac"
+    -->
+    <!--
+    <plugin name="MyUnixPlugin" version="0.1.0" minTarget="7.9" maxTarget="*" target="unix">
+      <title lang="EN">My Unix Plugin</title>
+      <desc lang="EN">Only for Unix-based LMS.</desc>
+      <category>tools</category>
+      <url>https://YOUR_SERVER/plugins/MyUnixPlugin-0.1.0.zip</url>
+      <creator>Your Name</creator>
+      <email>you@example.com</email>
+      <sha>0000000000000000000000000000000000000000</sha>
+    </plugin>
+    -->
+
+  </plugins>
+
+  <!-- ── Firmware Lua патчове за плейъри ───────────────────────────── -->
+  <patches>
+
+    <!--
+      Пример: Lua патч за Squeezebox Radio (baby)
+      target = "baby" (Radio) | "fab4" (Touch) | "squeezeplay" (desktop)
+      Файлът трябва да е .lua.patch (unified diff формат)
+    -->
+    <!--
+    <patch name="MyFirmwarePatch" target="baby" version="1.0" minTarget="7.7" maxTarget="7.7">
+      <title lang="EN">My Firmware Fix</title>
+      <desc lang="EN">Fixes something in the Radio firmware.</desc>
+      <creator>Your Name</creator>
+      <email>you@example.com</email>
+      <url>https://YOUR_SERVER/patches/MyFirmwarePatch-1.0.lua.patch</url>
+      <sha>0000000000000000000000000000000000000000</sha>
+    </patch>
+    -->
+
+  </patches>
+
+  <!-- ── Jive/SqueezePlay аплети (Lua, за Radio/Touch) ─────────────── -->
+  <!--
+    Аплетите са Lua апликации за Squeezebox Radio / Touch.
+    Структурата на zip файла: MyApplet/MyAppletApplet.lua + MyAppletMeta.lua
+    (НЕ трябва да съдържа поддиректории в zip-а!)
+  -->
+  <!--
+  <applets>
+    <applet name="MyApplet" version="1.0.0" minTarget="7.7" maxTarget="*" target="baby">
+      <title lang="EN">My Applet</title>
+      <desc lang="EN">A custom Jive applet for Squeezebox Radio.</desc>
+      <creator>Your Name</creator>
+      <email>you@example.com</email>
+      <url>https://YOUR_SERVER/applets/MyApplet-1.0.0.zip</url>
+      <sha>0000000000000000000000000000000000000000</sha>
+    </applet>
+  </applets>
+  -->
+
+</extensions>
