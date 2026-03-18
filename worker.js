@@ -180,17 +180,18 @@ function handleStatus() {
 
 function handleApps() {
   const apps = [
-    { id: "radio",    name: "Internet Radio", icon: "radio",    type: "app" },
-    { id: "podcasts", name: "Podcasts",        icon: "podcast",  type: "app" },
-    { id: "weather",  name: "Weather",         icon: "weather",  type: "app" },
-    { id: "news",     name: "News",            icon: "news",     type: "app" },
+    { id: "radio",    text: "Internet Radio", icon: "radio",    type: "app" },
+    { id: "podcasts", text: "Podcasts",        icon: "podcast",  type: "app" },
+    { id: "weather",  text: "Weather",         icon: "weather",  type: "app" },
+    { id: "news",     text: "News",            icon: "news",     type: "app" },
   ];
 
   return jsonResponse({
     status: "ok",
     result: {
-      loop_loop: apps,
+      item_loop: apps,
       count: apps.length,
+      offset: 0,
     }
   });
 }
@@ -261,11 +262,12 @@ async function handleJsonRpc(request, env) {
     case "apps":
       result = {
         count: 4,
-        appss_loop: [
-          { name: "Internet Radio", cmd: "radios",   icon: "" },
-          { name: "Podcasts",       cmd: "podcasts", icon: "" },
-          { name: "Weather",        cmd: "weather",  icon: "" },
-          { name: "News",           cmd: "news",     icon: "" },
+        offset: 0,
+        item_loop: [
+          { id: "squeezecloudRadio",    text: "Internet Radio", actions: { go: { cmd: ["radios", 0, 100], player: 0 } } },
+          { id: "squeezecloudPodcasts", text: "Podcasts",        actions: { go: { cmd: ["podcasts", 0, 100], player: 0 } } },
+          { id: "squeezecloud_weather", text: "Weather",         actions: { go: { cmd: ["weather"], player: 0 } } },
+          { id: "squeezecloud_news",    text: "News",            actions: { go: { cmd: ["news"], player: 0 } } },
         ]
       };
       break;
@@ -332,14 +334,13 @@ async function rpcRadios(cmd, env) {
 
   return {
     count: stations.length,
-    loop_loop: slice.map((s, i) => ({
+    offset: start,
+    item_loop: slice.map((s, i) => ({
       id: `radio:${start + i}`,
-      name: s.name,
+      text: s.name,
       type: "audio",
       url: s.url,
-      icon: "",
       isaudio: 1,
-      hasitems: 0,
     }))
   };
 }
@@ -350,9 +351,10 @@ async function rpcFavorites(cmd, env) {
   const stations = STATIC_STATIONS.slice(0, 10);
   return {
     count: stations.length,
-    loop_loop: stations.map((s, i) => ({
+    offset: 0,
+    item_loop: stations.map((s, i) => ({
       id: `fav:${i}`,
-      name: s.name,
+      text: s.name,
       url: s.url,
       type: "audio",
       isaudio: 1,
@@ -366,11 +368,11 @@ async function rpcWeather(env) {
   const weather = await fetchWeather(CONFIG.defaultLat, CONFIG.defaultLon, CONFIG.defaultCity);
   return {
     count: 1,
-    loop_loop: [{
+    offset: 0,
+    item_loop: [{
       id: "weather:current",
-      name: weather.summary,
+      text: weather.summary,
       type: "text",
-      isaudio: 0,
     }]
   };
 }
@@ -381,11 +383,11 @@ async function rpcNews(env) {
   const items = await fetchNewsItems(NEWS_FEEDS[0]);
   return {
     count: items.length,
-    loop_loop: items.slice(0, 10).map((item, i) => ({
+    offset: 0,
+    item_loop: items.slice(0, 10).map((item, i) => ({
       id: `news:${i}`,
-      name: item.title,
+      text: item.title,
       type: "text",
-      isaudio: 0,
     }))
   };
 }
@@ -402,11 +404,11 @@ async function rpcPodcasts(cmd, env) {
     // Return podcast channels
     return {
       count: PODCAST_FEEDS.length,
-      loop_loop: PODCAST_FEEDS.map((feed, i) => ({
+      offset: 0,
+      item_loop: PODCAST_FEEDS.map((feed, i) => ({
         id: `podcast:${i}`,
-        name: feed.name,
+        text: feed.name,
         type: "playlist",
-        isaudio: 0,
         hasitems: 1,
         item_id: `podcast:${i}`,
       }))
@@ -416,18 +418,18 @@ async function rpcPodcasts(cmd, env) {
   // Drill into a podcast feed
   const feedIdx = parseInt(menuId.replace("item_id:podcast:", "")) || 0;
   const feed = PODCAST_FEEDS[feedIdx];
-  if (!feed) return { count: 0, loop_loop: [] };
+  if (!feed) return { count: 0, offset: 0, item_loop: [] };
 
   const episodes = await fetchPodcastEpisodes(feed);
   return {
     count: episodes.length,
-    loop_loop: episodes.slice(start, start + 10).map((ep, i) => ({
+    offset: start,
+    item_loop: episodes.slice(start, start + 10).map((ep, i) => ({
       id: `episode:${feedIdx}:${i}`,
-      name: ep.title,
+      text: ep.title,
       type: "audio",
       url: ep.url,
       isaudio: 1,
-      hasitems: 0,
     }))
   };
 }

@@ -579,3 +579,139 @@ If you do this often, its recommended to upload this as a little script to your 
  /etc/init.d/squeezeplay stopwdog && /etc/init.d/squeezeplay restart
 * To watch the messages produced by your applet just follow the messages file
  tail -f /var/log/messages
+
+== SqueezeCloud Hosting on Cloudflare Workers ==
+
+=== Може ли да се хоства всичко на Cloudflare Worker? / Can everything be hosted on Cloudflare Worker? ===
+
+**Кратък отговор: Да — и е препоръчителният вариант за домашна употреба.**
+
+Cloudflare Workers е идеално подходящ за SqueezeCloud поради следните причини:
+
+* Squeezebox Radio прави относително малко заявки — при нормална домашна употреба (<10 устройства) трафикът е под 10 000 заявки/ден.
+* Cloudflare Free план включва **100 000 заявки/ден** — повече от достатъчно.
+* KV Storage (за кеш на радио станции): 100 000 четения/ден и 1 000 записа/ден (Free план).
+* Латентността е ниска — Cloudflare Worker се изпълнява в Point of Presence най-близо до устройството.
+* Няма нужда от постоянен сървър, VPS или домашен компютър.
+
+**Граници на стабилността:**
+
+| Параметър | Free план | Типична домашна употреба |
+|-----------|-----------|--------------------------|
+| Заявки/ден | 100 000 | ~1 000–5 000 |
+| CPU ms/заявка | 10 ms | <2 ms |
+| Памет | 128 MB | <10 MB |
+| KV четения/ден | 100 000 | ~500–2 000 |
+
+Cloudflare Worker е напълно стабилен за домашна употреба. При >10 устройства или публичен сървър е препоръчително платеният план ($5/месец — 10 милиона заявки).
+
+=== Промяна на Hostname / Custom Domain в Cloudflare ===
+
+По подразбиране Worker работи на `*.workers.dev`. За да накараш Squeezebox да достига до него директно (без промяна на `/etc/hosts`), има два подхода:
+
+==== Вариант 1: Собствен домейн в Cloudflare (препоръчително) ====
+
+Ако имаш домейн (напр. `example.com`) управляван в Cloudflare DNS:
+
+1. **Добави Worker Route** в `wrangler.toml`:
+<pre>
+[[routes]]
+pattern = "squeeze.example.com/*"
+zone_name = "example.com"
+</pre>
+
+2. **Добави DNS запис** в Cloudflare Dashboard → DNS:
+   - Type: `CNAME`
+   - Name: `squeeze`
+   - Target: `squeezecloud.YOUR_SUBDOMAIN.workers.dev`
+   - Proxy: ✅ Enabled (оранжев облак)
+
+3. На Squeezebox редактирай `/mnt/storage/etc/hosts`:
+<pre>
+YOUR.WORKER.IP  mysqueezebox.com
+YOUR.WORKER.IP  www.mysqueezebox.com
+YOUR.WORKER.IP  update.squeezenetwork.com
+</pre>
+   Заменяш `YOUR.WORKER.IP` с IP адреса на `squeeze.example.com` (`dig +short squeeze.example.com`).
+
+==== Вариант 2: Прихващане на mysqueezebox.com чрез Cloudflare Proxy ====
+
+Ако контролираш домейна `mysqueezebox.com` (не е реалистично — той е на Logitech), Worker Route ще работи директно. За домашна употреба е по-лесно да:
+
+1. Използваш собствен домейн (Вариант 1 по-горе), **или**
+2. Оставиш `/etc/hosts` на устройството да пренасочва `mysqueezebox.com` към Worker IP — това е текущото решение и работи стабилно.
+
+==== Вариант 3: Cloudflare Zero Trust Tunnel (без публичен IP) ====
+
+Ако искаш локалния Python сървър (`squeezecloud/main.py`) да е достъпен отвън без публичен IP:
+
+```bash
+# Инсталирай cloudflared
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+chmod +x cloudflared
+./cloudflared tunnel login
+./cloudflared tunnel create squeezebox
+./cloudflared tunnel route dns squeezebox squeeze.example.com
+./cloudflared tunnel run --url http://localhost:9000 squeezebox
+```
+
+Това дава HTTPS URL без нужда от отваряне на портове на рутера.
+
+=== Сравнение: Cloudflare Worker vs Локален Python сървър ===
+
+| Критерий | Cloudflare Worker | Локален Python сървър |
+|----------|-------------------|----------------------|
+| Инсталация | Само `wrangler deploy` | Python + uvicorn |
+| Нужен локален компютър | ❌ Не | ✅ Да |
+| Работи извън домашната мрежа | ✅ Да | ⚠️ Само с тунел |
+| Slim Protocol (TCP 3483) | ❌ Не | ✅ Да (за LMS функции) |
+| Latency | Ниска (CF edge) | Много ниска (local) |
+| Цена | Безплатно | Безплатно |
+| Препоръка | Пътуване / публичен | У дома |
+
+=== Препоръчана архитектура за домашна употреба ===
+
+```
+Squeezebox Radio
+      │
+      │ /mnt/storage/etc/hosts пренасочва mysqueezebox.com
+      ▼
+Cloudflare Worker  (worker.js)
+      │
+      │ API заявки (login, menu, radios, weather, news)
+      ▼
+External APIs (Radio Browser, Open-Meteo, RSS feeds)
+```
+
+За локален Slim Protocol (TCP 3483, за синхронизация между плейъри):
+
+```
+Squeezebox Radio ──TCP 3483──► Локален Python сървър (main.py)
+                  ──HTTP 9000──► Локален Python сървър (main.py)
+```
+
+=== JSON-RPC Schema изисквания (важно за разработчици) ===
+
+Jive firmware на Squeezebox Radio е строг по отношение на формата на browse отговорите.
+При `count > 0` задължително трябва:
+
+* `item_loop` (НЕ `loop_loop`) — масив с обектите
+* `offset` — индекс на първия елемент (0-базиран)
+* `text` (НЕ `name`) — текст за показване на всеки обект
+
+Всеки аудио обект трябва да има:
+* `isaudio: 1` — маркира елемента като аудио (ще се пусне при натискане)
+* `url` — директен URL към аудио потока
+* Без `hasitems: 0` — в Lua числото 0 е truthy, което кара firmware-а да търси под-елементи!
+
+Пример за правилен browse отговор:
+<pre>
+{
+  "count": 3,
+  "offset": 0,
+  "item_loop": [
+    { "id": "radio:0", "text": "БНР Хоризонт", "url": "https://stream.bnr.bg/horizont_24", "type": "audio", "isaudio": 1 },
+    { "id": "radio:1", "text": "БНР Христо Ботев", "url": "https://stream.bnr.bg/hristobotev_24", "type": "audio", "isaudio": 1 }
+  ]
+}
+</pre>
