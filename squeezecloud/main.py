@@ -65,7 +65,7 @@ STATIC_STATIONS = [
     {"name": "KEXP 90.3 FM",         "url": "https://kexp-mp3-128.streamguys1.com/kexp128.mp3",         "genre": "Indie","country": "US"},
     {"name": "SomaFM Groove Salad",  "url": "https://ice1.somafm.com/groovesalad-128-mp3",              "genre": "Ambient","country": "US"},
     {"name": "SomaFM Drone Zone",    "url": "https://ice1.somafm.com/dronezone-128-mp3",                "genre": "Ambient","country": "US"},
-    {"name": "Jazz24",               "url": "https://live.wostreaming.net/manifest/ppm-jazz24mp3-ibc1.m3u8", "genre": "Jazz","country": "US"},
+    {"name": "Jazz24",               "url": "https://streams.jazz24.org/jazz24_mp3",                          "genre": "Jazz","country": "US"},
     {"name": "1.FM Jazz & Blues",    "url": "https://strm112.1.fm/jazzandblues_mobile_mp3",             "genre": "Jazz","country": "US"},
 ]
 
@@ -202,7 +202,180 @@ async def status():
     }
 
 # ═════════════════════════════════════════════════════════════════════════════
-# APPS
+# WEB CONTROL — прост HTML статус / контролен панел
+# ═════════════════════════════════════════════════════════════════════════════
+
+_WEBCONTROL_HTML = """<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SqueezeCloud — контрол</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #1a1a2e; color: #eee; }
+    header { background: #16213e; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+    header h1 { margin: 0; font-size: 1.4rem; color: #e94560; }
+    .badge { font-size: .75rem; background: #0f3460; padding: .2rem .6rem; border-radius: 999px; }
+    main { padding: 1.5rem 2rem; }
+    .card { background: #16213e; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.2rem; }
+    .card h2 { margin: 0 0 .6rem; font-size: 1rem; color: #e94560; text-transform: uppercase; letter-spacing: .05em; }
+    .info-row { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .info-item label { display: block; font-size: .75rem; color: #aaa; }
+    .info-item span { font-size: 1rem; font-weight: bold; }
+    .genre-list { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+    .genre-btn { background: #0f3460; border: none; color: #eee; padding: .35rem .9rem;
+                 border-radius: 999px; cursor: pointer; font-size: .85rem; }
+    .genre-btn:hover, .genre-btn.active { background: #e94560; }
+    #stations { margin-top: 1rem; }
+    .station-row { display: flex; justify-content: space-between; align-items: center;
+                   padding: .5rem 0; border-bottom: 1px solid #0f3460; }
+    .station-row:last-child { border-bottom: none; }
+    .station-name { font-size: .95rem; }
+    .station-meta { font-size: .75rem; color: #aaa; }
+    .copy-btn { background: #e94560; border: none; color: #fff; padding: .3rem .8rem;
+                border-radius: 4px; cursor: pointer; font-size: .8rem; }
+    .copy-btn:hover { background: #c73652; }
+    #msg { position: fixed; bottom: 1rem; right: 1rem; background: #e94560; color: #fff;
+           padding: .6rem 1.2rem; border-radius: 6px; display: none; font-size: .9rem; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>&#127925; SqueezeCloud</h1>
+  <span class="badge" id="srv-version">v…</span>
+  <span class="badge" id="device-mac">устройство: …</span>
+</header>
+<main>
+  <div class="card">
+    <h2>Статус на сървъра</h2>
+    <div class="info-row">
+      <div class="info-item"><label>Сървър</label><span id="srv-name">…</span></div>
+      <div class="info-item"><label>Версия</label><span id="srv-ver">…</span></div>
+      <div class="info-item"><label>Свързано устройство (MAC)</label><span id="dev-mac">…</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Радио по жанр</h2>
+    <div class="genre-list" id="genre-list">Зареждане…</div>
+    <div id="stations"></div>
+  </div>
+</main>
+<div id="msg"></div>
+<script>
+  let allStations = [];
+
+  async function init() {
+    // Server status
+    try {
+      const r = await fetch('/api/v1/status');
+      const d = await r.json();
+      document.getElementById('srv-name').textContent = d.result.server_name;
+      document.getElementById('srv-ver').textContent = d.result.version;
+      document.getElementById('srv-version').textContent = 'v' + d.result.version;
+    } catch (e) { console.error('status error', e); }
+
+    // Device MAC (best-effort)
+    try {
+      const r = await fetch('/api/v1/session');
+      const d = await r.json();
+      const mac = (d.result && d.result.playerid) || '\u2014';
+      document.getElementById('dev-mac').textContent = mac;
+      document.getElementById('device-mac').textContent = 'MAC: ' + mac;
+    } catch (_) {}
+
+    // Radio stations
+    try {
+      const r = await fetch('/api/v1/radios');
+      const d = await r.json();
+      allStations = d.stations || [];
+      renderGenres(d.genres || []);
+      renderStations(allStations.slice(0, 20));
+    } catch (e) { console.error('radios error', e); }
+  }
+
+  function renderGenres(genres) {
+    const el = document.getElementById('genre-list');
+    el.innerHTML = '';
+    const all = document.createElement('button');
+    all.className = 'genre-btn active';
+    all.textContent = 'Всички';
+    all.addEventListener('click', () => { setActive(all); renderStations(allStations.slice(0, 50)); });
+    el.appendChild(all);
+    genres.forEach(g => {
+      const btn = document.createElement('button');
+      btn.className = 'genre-btn';
+      btn.textContent = g;
+      btn.addEventListener('click', () => {
+        setActive(btn);
+        renderStations(allStations.filter(s => (s.genre || '').toLowerCase() === g.toLowerCase()));
+      });
+      el.appendChild(btn);
+    });
+  }
+
+  function setActive(btn) {
+    document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // Render station rows using DOM creation — no innerHTML with user data, no XSS.
+  function renderStations(stations) {
+    const el = document.getElementById('stations');
+    el.innerHTML = '';
+    if (!stations.length) {
+      const p = document.createElement('p');
+      p.style.color = '#aaa';
+      p.textContent = 'Няма станции.';
+      el.appendChild(p);
+      return;
+    }
+    stations.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'station-row';
+
+      const info = document.createElement('div');
+      const nameEl = document.createElement('div');
+      nameEl.className = 'station-name';
+      nameEl.textContent = s.name || '';
+      const metaEl = document.createElement('div');
+      metaEl.className = 'station-meta';
+      metaEl.textContent = (s.genre || '') + ' \u2022 ' + (s.country || '') + ' \u2022 ' + (s.bitrate || '?') + ' kbps';
+      info.appendChild(nameEl);
+      info.appendChild(metaEl);
+
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = '\\u25b6 URL';
+      btn.addEventListener('click', () => copyUrl(s.url || '', s.name || ''));
+
+      row.appendChild(info);
+      row.appendChild(btn);
+      el.appendChild(row);
+    });
+  }
+
+  function copyUrl(url, name) {
+    navigator.clipboard.writeText(url).then(() => showMsg('Копирано: ' + name)).catch(() => showMsg(url));
+  }
+
+  function showMsg(text) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>
+"""
+
+
+@app.get("/webcontrol")
+async def webcontrol():
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=_WEBCONTROL_HTML)
 # ═════════════════════════════════════════════════════════════════════════════
 
 @app.get("/api/v1/apps")
@@ -211,13 +384,14 @@ async def get_apps():
     return {
         "status": "ok",
         "result": {
-            "loop_loop": [
-                {"id": "radio",    "name": "Internet Radio", "type": "app"},
-                {"id": "podcasts", "name": "Podcasts",        "type": "app"},
-                {"id": "weather",  "name": "Weather",         "type": "app"},
-                {"id": "news",     "name": "News",            "type": "app"},
+            "item_loop": [
+                {"id": "radio",    "text": "Internet Radio", "type": "app"},
+                {"id": "podcasts", "text": "Podcasts",        "type": "app"},
+                {"id": "weather",  "text": "Weather",         "type": "app"},
+                {"id": "news",     "text": "News",            "type": "app"},
             ],
             "count": 4,
+            "offset": 0,
         }
     }
 
@@ -630,22 +804,64 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
     elif command in ("radios", "radio"):
         start = int(cmd[1]) if len(cmd) > 1 else 0
         count = int(cmd[2]) if len(cmd) > 2 else 10
+
+        # Detect genre drill-down: SlimBrowser appends "item_id:genre:Rock" when user
+        # selects a genre node, matching the same pattern used by the podcasts handler.
+        item_id = next((c for c in cmd if isinstance(c, str) and c.startswith("item_id:")), None)
+
         stations = await get_radio_stations()
-        slice_ = stations[start:start + count]
-        return {
-            "count": len(stations),
-            "offset": start,
-            "item_loop": [
-                {
-                    "id": f"radio:{start+i}",
-                    "text": s["name"],
-                    "type": "audio",
-                    "url": s["url"],
-                    "isaudio": 1,
-                }
-                for i, s in enumerate(slice_)
+
+        if item_id and item_id.startswith("item_id:genre:"):
+            # Drill into a specific genre (or "All" for the full list)
+            genre = item_id[len("item_id:genre:"):]
+            filtered = stations if genre == "All" else [
+                s for s in stations
+                if (s.get("genre") or "Music").lower() == genre.lower()
             ]
-        }
+            slice_ = filtered[start:start + count]
+            return {
+                "count": len(filtered),
+                "offset": start,
+                "item_loop": [
+                    {
+                        "id": f"radio:{start + i}",
+                        "text": s["name"],
+                        "type": "audio",
+                        "url": s["url"],
+                        "isaudio": 1,
+                    }
+                    for i, s in enumerate(slice_)
+                ],
+            }
+        else:
+            # Top level — show genre nodes so the user can browse by genre.
+            # Build a de-duplicated, sorted genre list from all available stations.
+            genres = sorted(set((s.get("genre") or "Music") for s in stations))
+            genre_items = [
+                {
+                    "id": f"genre:{g}",
+                    "text": g,
+                    "item_id": f"genre:{g}",
+                    "hasitems": 1,
+                    "type": "playlist",
+                }
+                for g in genres
+            ]
+            # Prepend an "All Stations" shortcut
+            all_item = {
+                "id": "genre:All",
+                "text": "All Stations",
+                "item_id": "genre:All",
+                "hasitems": 1,
+                "type": "playlist",
+            }
+            items = ([all_item] + genre_items)[start:start + count]
+            total = len(genres) + 1  # genres + "All Stations"
+            return {
+                "count": total,
+                "offset": start,
+                "item_loop": items,
+            }
 
     elif command == "podcasts":
         start = int(cmd[1]) if len(cmd) > 1 else 0
@@ -848,6 +1064,9 @@ async def get_radio_stations() -> list:
                     }
                     for s in data
                     if s.get("url_resolved") and s.get("name")
+                    # Exclude HLS (.m3u8) streams — Squeezebox Radio firmware does not
+                    # support HTTP Live Streaming; only direct MP3/AAC/OGG streams work.
+                    and not s["url_resolved"].lower().endswith(".m3u8")
                 ]
     except Exception as e:
         log.warning("Radio Browser API error: %s", e)
@@ -1181,7 +1400,7 @@ async def slim_udp_discovery(local_ip: str):
             # Squeezebox изпраща 'e' за discovery request
             if data and data[0:1] in (b"e", b"E", b"d"):
                 sock.sendto(response, addr)
-                log.info("[Discovery] ✓ Отговорено на %s → %s @ %s:9000", addr[0], CONFIG['server_name'], local_ip)
+                log.debug("[Discovery] ✓ Отговорено на %s → %s @ %s:9000", addr[0], CONFIG['server_name'], local_ip)
 
         except BlockingIOError:
             await asyncio.sleep(0.05)
