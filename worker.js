@@ -25,6 +25,8 @@ const CONFIG = {
   defaultLat: 42.6977,
   defaultLon: 23.3219,
   defaultCity: "Sofia",
+  // How long to keep "now playing" state in KV (seconds)
+  nowPlayingTtl: 3600,
 };
 
 // ─── STATIC RADIO STATIONS ───────────────────────────────────────────────────
@@ -247,7 +249,12 @@ async function handleJsonRpc(request, env) {
       break;
 
     case "pause":
+      await rpcPause(playerMac, env);
       result = { ok: 1 };
+      break;
+
+    case "playlist":
+      result = await rpcPlaylist(cmd, playerMac, env);
       break;
 
     case "mixer":
@@ -313,16 +320,79 @@ async function rpcServerStatus(env) {
 // ─── RPC: PLAYER STATUS ───────────────────────────────────────────────────────
 
 async function rpcPlayerStatus(mac, env) {
+  let mode = "stop";
+  let playlistLoop = [];
+  let remoteMeta = {};
+
+  if (env && env.RADIO_KV && mac) {
+    try {
+      const nowPlaying = await env.RADIO_KV.get(`player:${mac}:now_playing`, { type: "json" });
+      if (nowPlaying && nowPlaying.url) {
+        mode = "play";
+        playlistLoop = [{
+          id: "current",
+          title: nowPlaying.name || "",
+          url: nowPlaying.url,
+          duration: 0,
+          remote: 1,
+        }];
+        remoteMeta = { title: nowPlaying.name || "", url: nowPlaying.url };
+      }
+    } catch (_) {
+      // KV unavailable — fall through to stopped state
+    }
+  }
+
   return {
     playerid: mac,
     name: "Squeezebox Radio",
-    mode: "stop",
+    mode,
     mixer_volume: 50,
     playlist_cur_index: 0,
     playlist_timestamp: Date.now() / 1000,
-    playlist_loop: [],
-    remoteMeta: {},
+    playlist_loop: playlistLoop,
+    remoteMeta,
   };
+}
+
+// ─── RPC: PLAYLIST ────────────────────────────────────────────────────────────
+
+async function rpcPlaylist(cmd, mac, env) {
+  // cmd[1] = sub-command ("play", "stop", "pause", ...)
+  // cmd[2] = url (for "play")
+  const subCmd = (cmd[1] || "").toLowerCase();
+
+  if (subCmd === "play" && cmd[2]) {
+    const url = cmd[2];
+    const name = cmd[3] || "";
+    if (env && env.RADIO_KV && mac) {
+      try {
+        await env.RADIO_KV.put(`player:${mac}:now_playing`, JSON.stringify({ url, name }), { expirationTtl: CONFIG.nowPlayingTtl });
+      } catch (_) { /* KV unavailable */ }
+    }
+    return { ok: 1, mode: "play", url };
+  }
+
+  if (subCmd === "stop" || subCmd === "clear") {
+    if (env && env.RADIO_KV && mac) {
+      try {
+        await env.RADIO_KV.delete(`player:${mac}:now_playing`);
+      } catch (_) { /* KV unavailable */ }
+    }
+    return { ok: 1, mode: "stop" };
+  }
+
+  return { ok: 1 };
+}
+
+// ─── RPC: PAUSE ──────────────────────────────────────────────────────────────
+
+async function rpcPause(mac, env) {
+  if (env && env.RADIO_KV && mac) {
+    try {
+      await env.RADIO_KV.delete(`player:${mac}:now_playing`);
+    } catch (_) { /* KV unavailable */ }
+  }
 }
 
 // ─── RPC: RADIOS ─────────────────────────────────────────────────────────────
@@ -354,19 +424,30 @@ async function rpcRadios(cmd, env) {
         type: "audio",
         url: s.url,
         isaudio: 1,
+        actions: {
+          go: {
+            player: 0,
+            cmd: ["playlist", "play", s.url, s.name],
+            nextWindow: "nowPlaying",
+          },
+        },
       })),
     };
   }
 
   // Top level — show genre nodes so the user can browse by genre.
   const genres = [...new Set(stations.map(s => s.genre || "Music"))].sort();
-  const allItem = { id: "genre:All", text: "All Stations", item_id: "genre:All", hasitems: 1, type: "playlist" };
+  const allItem = {
+    id: "genre:All",
+    text: "All Stations",
+    hasitems: 1,
+    actions: { go: { player: 0, cmd: ["radios", 0, 100, "item_id:genre:All"] } },
+  };
   const genreItems = genres.map(g => ({
     id: `genre:${g}`,
     text: g,
-    item_id: `genre:${g}`,
     hasitems: 1,
-    type: "playlist",
+    actions: { go: { player: 0, cmd: ["radios", 0, 100, `item_id:genre:${g}`] } },
   }));
   const allItems = [allItem, ...genreItems];
   const total = allItems.length;
@@ -390,6 +471,13 @@ async function rpcFavorites(cmd, env) {
       url: s.url,
       type: "audio",
       isaudio: 1,
+      actions: {
+        go: {
+          player: 0,
+          cmd: ["playlist", "play", s.url, s.name],
+          nextWindow: "nowPlaying",
+        },
+      },
     }))
   };
 }
@@ -440,9 +528,8 @@ async function rpcPodcasts(cmd, env) {
       item_loop: PODCAST_FEEDS.map((feed, i) => ({
         id: `podcast:${i}`,
         text: feed.name,
-        type: "playlist",
         hasitems: 1,
-        item_id: `podcast:${i}`,
+        actions: { go: { player: 0, cmd: ["podcasts", 0, 100, `item_id:podcast:${i}`] } },
       }))
     };
   }
@@ -462,6 +549,13 @@ async function rpcPodcasts(cmd, env) {
       type: "audio",
       url: ep.url,
       isaudio: 1,
+      actions: {
+        go: {
+          player: 0,
+          cmd: ["playlist", "play", ep.url, ep.title],
+          nextWindow: "nowPlaying",
+        },
+      },
     }))
   };
 }
