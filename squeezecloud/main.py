@@ -502,7 +502,74 @@ async def catch_all(request: Request, path: str):
     return JSONResponse({"status": "ok", "result": []})
 
 
-async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
+def _home_menu_items() -> list:
+    """
+    Returns the list of home-menu items sent via the 'menu' command and pushed
+    via the 'menustatus' Comet channel.
+
+    IMPORTANT – Lua treats the number 0 as truthy, so we must NEVER include
+    "isANode": 0 in non-node items.  Only node items carry "isANode": 1.
+    All items that should appear as clickable entries must omit the isANode key.
+
+    The id "radios" is explicitly ignored by SlimMenusApplet ("shown locally"),
+    so we use "radio" (without the trailing 's') for our Internet Radio entry.
+
+    Items with isApp:1 are automatically placed under the "My Apps" node AND
+    copied to the home menu by the firmware (addAppToHome logic).  This gives
+    us both a "My Apps" section and direct shortcuts on the home screen.
+    """
+    return [
+        {
+            "id": "favorites",
+            "node": "home",
+            "text": "Favorites",
+            "iconStyle": "hm_favorites",
+            "weight": 10,
+            "actions": {
+                "go": {"cmd": ["favorites", 0, 100], "player": 0}
+            },
+            "window": {"windowId": "favorites"},
+        },
+        {
+            # isApp:1 → item is placed under "My Apps" node AND copied to home
+            "id": "squeezecloudRadio",
+            "node": "home",
+            "text": "Internet Radio",
+            "iconStyle": "hm_radio",
+            "isApp": 1,
+            "weight": 20,
+            "actions": {
+                "go": {"cmd": ["radios", 0, 100], "player": 0}
+            },
+            "window": {"windowId": "squeezecloudRadio"},
+        },
+        {
+            "id": "squeezecloudPodcasts",
+            "node": "home",
+            "text": "Podcasts",
+            "iconStyle": "hm_podcast",
+            "isApp": 1,
+            "weight": 40,
+            "actions": {
+                "go": {"cmd": ["podcasts", 0, 100], "player": 0}
+            },
+            "window": {"windowId": "squeezecloudPodcasts"},
+        },
+        {
+            "id": "squeezecloud_weather",
+            "node": "home",
+            "text": "Weather & News",
+            "iconStyle": "hm_weather",
+            "weight": 50,
+            "actions": {
+                "go": {"cmd": ["weather"], "player": 0}
+            },
+            "window": {"windowId": "squeezecloud_weather"},
+        },
+    ]
+
+
+async def dispatch_rpc(command: str, cmd: list, player_mac: str):
     if command == "serverstatus":
         mac = _device_mac
         print(f"[serverstatus] via dispatch, mac={mac}")
@@ -558,7 +625,8 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
         slice_ = stations[start:start + count]
         return {
             "count": len(stations),
-            "loop_loop": [
+            "offset": start,
+            "item_loop": [
                 {
                     "id": f"radio:{start+i}",
                     "text": s["name"],
@@ -574,13 +642,15 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
 
     elif command == "podcasts":
         start = int(cmd[1]) if len(cmd) > 1 else 0
+        count = int(cmd[2]) if len(cmd) > 2 else 10
         item_id = next((c for c in cmd if isinstance(c, str) and "item_id:" in c), None)
 
         if not item_id:
             return {
                 "count": len(PODCAST_FEEDS),
-                "loop_loop": [
-                    {"id": f"podcast:{i}", "name": f["name"], "type": "playlist",
+                "offset": 0,
+                "item_loop": [
+                    {"id": f"podcast:{i}", "text": f["name"], "type": "playlist",
                      "isaudio": 0, "hasitems": 1, "item_id": f"podcast:{i}"}
                     for i, f in enumerate(PODCAST_FEEDS)
                 ]
@@ -589,78 +659,31 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
             feed_idx = int(item_id.replace("item_id:podcast:", ""))
             feed = PODCAST_FEEDS[feed_idx]
             episodes = await fetch_podcast_episodes(feed)
+            slice_ = episodes[start:start + count]
             return {
                 "count": len(episodes),
-                "loop_loop": [
-                    {"id": f"ep:{feed_idx}:{i}", "name": ep["title"],
+                "offset": start,
+                "item_loop": [
+                    {"id": f"ep:{feed_idx}:{i}", "text": ep["title"],
                      "type": "audio", "url": ep["url"], "isaudio": 1}
-                    for i, ep in enumerate(episodes[start:start+10])
+                    for i, ep in enumerate(slice_)
                 ]
             }
 
     elif command == "menu":
+        items = _home_menu_items()
         return {
-            "count": 5,
-            "item_loop": [
-                {
-                    "id": "favorites",
-                    "node": "home",
-                    "text": "Favorites",
-                    "iconStyle": "hm_favorites",
-                    "weight": 10,
-                    "isANode": 0,
-                    "actions": {
-                        "go": {"cmd": ["favorites", 0, 100], "player": 0}
-                    },
-                    "window": {"windowId": "favorites"},
-                },
-                {
-                    "id": "globalSearch",
-                    "node": "home",
-                    "text": "Internet Radio",
-                    "iconStyle": "hm_radio",
-                    "weight": 20,
-                    "isANode": 0,
-                    "actions": {
-                        "go": {"cmd": ["radios", 0, 100], "player": 0}
-                    },
-                    "window": {"windowId": "globalSearch"},
-                },
-                {
-                    "id": "myApps",
-                    "node": "home",
-                    "text": "My Apps",
-                    "iconStyle": "hm_myApps",
-                    "weight": 30,
-                    "isANode": 1,
-                    "window": {"windowId": "myApps"},
-                },
-                {
-                    "id": "randomplay",
-                    "node": "home",
-                    "text": "Podcasts",
-                    "iconStyle": "hm_randomplay",
-                    "weight": 40,
-                    "isANode": 0,
-                    "actions": {
-                        "go": {"cmd": ["podcasts", 0, 100], "player": 0}
-                    },
-                    "window": {"windowId": "randomplay"},
-                },
-                {
-                    "id": "settingsAlarm",
-                    "node": "home",
-                    "text": "Weather & News",
-                    "iconStyle": "hm_settingsAlarm",
-                    "weight": 50,
-                    "isANode": 0,
-                    "actions": {
-                        "go": {"cmd": ["weather"], "player": 0}
-                    },
-                    "window": {"windowId": "settingsAlarm"},
-                },
-            ],
+            "count": len(items),
+            "offset": 0,
+            "item_loop": items,
         }
+
+    elif command == "menustatus":
+        # Push initial menu items via the menustatus Comet channel.
+        # Lua reads chunk.data[2]=items, chunk.data[3]=directive, chunk.data[4]=playerId
+        # (Lua arrays are 1-indexed, so JSON index 0 → Lua index 1, etc.)
+        mac = player_mac or _device_mac
+        return [mac, _home_menu_items(), "add", mac]
 
     elif command == "register":
         # Отговаряме с goNow="home" за да накараме Jive браузъра да се прехвърли
@@ -714,7 +737,8 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
         slice_ = STATIC_STATIONS[start:start + count]
         return {
             "count": len(STATIC_STATIONS),
-            "loop_loop": [
+            "offset": start,
+            "item_loop": [
                 {
                     "id": f"fav:{start + i}",
                     "text": s["name"],
@@ -731,28 +755,27 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str) -> dict:
         w = await fetch_weather()
         return {
             "count": 1,
-            "loop_loop": [{"id": "weather:current", "text": w["summary"], "type": "text", "isaudio": 0}]
+            "offset": 0,
+            "item_loop": [{"id": "weather:current", "text": w["summary"], "type": "text", "isaudio": 0}]
         }
 
     elif command == "news":
         items = await fetch_news_items(NEWS_FEEDS[0])
         return {
             "count": len(items),
-            "loop_loop": [
+            "offset": 0,
+            "item_loop": [
                 {"id": f"news:{i}", "text": item["title"], "type": "text", "isaudio": 0}
                 for i, item in enumerate(items[:10])
             ]
         }
 
     elif command == "apps":
+        app_items = _home_menu_items()
         return {
-            "count": 4,
-            "loop_loop": [
-                {"id": "radio",    "text": "Internet Radio", "cmd": "radios",   "type": "link"},
-                {"id": "podcasts", "text": "Podcasts",        "cmd": "podcasts", "type": "link"},
-                {"id": "weather",  "text": "Weather",         "cmd": "weather",  "type": "link"},
-                {"id": "news",     "text": "News",            "cmd": "news",     "type": "link"},
-            ]
+            "count": len(app_items),
+            "offset": 0,
+            "item_loop": app_items,
         }
 
     else:
