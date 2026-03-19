@@ -61,8 +61,11 @@ _python_audio_thread: Optional[threading.Thread] = None
 # ── Local LAN IP — set once in main() ────────────────────────────────────────
 _local_ip: str = "127.0.0.1"
 # ── Comet status subscription channel — set when device subscribes for status ─
-# Stored globally so it can be found even when playlist play arrives with no clientId
 _status_channel: str = ""
+# ── Player volume (0-100) — synced to Squeezebox when connected ───────────────
+_player_volume: int = 80
+# ── Timestamp of last CometD message from device (used to detect connection) ──
+_comet_last_seen: float = 0.0
 
 # ── Конфигурация ──────────────────────────────────────────────────────────────
 CONFIG = {
@@ -279,85 +282,109 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: sans-serif; margin: 0; background: #1a1a2e; color: #eee; }
-    header { background: #16213e; padding: .8rem 1.5rem; display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
-    header h1 { margin: 0; font-size: 1.3rem; color: #e94560; white-space: nowrap; }
+    header { background: #16213e; padding: .8rem 1.4rem; display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 1.25rem; color: #e94560; white-space: nowrap; }
     .badge { font-size: .7rem; background: #0f3460; padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; }
-    .badge.green { background: #1a6b3a; color: #7dffaa; }
-    main { padding: 1rem 1.5rem; max-width: 900px; margin: 0 auto; }
-    .card { background: #16213e; border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
-    .card h2 { margin: 0 0 .7rem; font-size: .85rem; color: #e94560; text-transform: uppercase; letter-spacing: .07em; }
+    .badge.green  { background: #1a6b3a; color: #7dffaa; }
+    .badge.orange { background: #5c3d00; color: #ffc261; }
+    .badge.red    { background: #5c0000; color: #ff9090; }
+    main { padding: .9rem 1.4rem; max-width: 900px; margin: 0 auto; }
+    .card { background: #16213e; border-radius: 8px; padding: .9rem 1.1rem; margin-bottom: .9rem; }
+    .card h2 { margin: 0 0 .6rem; font-size: .8rem; color: #e94560; text-transform: uppercase; letter-spacing: .07em; }
 
     /* ── Now-Playing ──────────────────────────────────────── */
     #np-card { display: none; }
     #np-card.active { display: block; }
-    .np-inner { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .np-icon { font-size: 2rem; flex-shrink: 0; animation: spin 3s linear infinite; }
+    .np-inner { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; }
+    .np-icon { font-size: 1.8rem; flex-shrink: 0; animation: spin 3s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .np-icon.paused { animation-play-state: paused; }
-    .np-text { flex: 1 1 160px; }
-    .np-name { font-size: 1.05rem; font-weight: bold; color: #fff; }
-    .np-sub  { font-size: .75rem; color: #aaa; margin-top: .2rem; }
-    .np-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-    .ctrl-btn { background: #0f3460; border: none; color: #eee; width: 2.2rem; height: 2.2rem;
-                border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex;
+    .np-text { flex: 1 1 140px; }
+    .np-name { font-size: 1rem; font-weight: bold; color: #fff; word-break: break-word; }
+    .np-sub  { font-size: .72rem; color: #aaa; margin-top: .15rem; word-break: break-all; }
+    .np-source { font-size: .72rem; margin-top: .2rem; }
+    .np-source.device { color: #7dffaa; }
+    .np-source.browser { color: #ffc261; }
+    .np-source.local   { color: #90c0ff; }
+    .np-controls { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+    .ctrl-btn { background: #0f3460; border: none; color: #eee; width: 2rem; height: 2rem;
+                border-radius: 50%; cursor: pointer; font-size: .95rem; display: flex;
                 align-items: center; justify-content: center; transition: background .15s; }
     .ctrl-btn:hover { background: #e94560; }
     .ctrl-btn.stop-btn { background: #6b1a1a; }
     .ctrl-btn.stop-btn:hover { background: #e94560; }
-    .vol-row { display: flex; align-items: center; gap: .4rem; font-size: .75rem; color: #aaa; width: 100%; }
+    .vol-row { display: flex; align-items: center; gap: .35rem; font-size: .72rem; color: #aaa; width: 100%; }
     #vol-slider { flex: 1; accent-color: #e94560; cursor: pointer; }
-    #vol-label { min-width: 2.5rem; text-align: right; }
+    #vol-label { min-width: 2.2rem; text-align: right; }
 
-    /* ── Genre filter ─────────────────────────────────────── */
-    .genre-list { display: flex; flex-wrap: wrap; gap: .4rem; }
-    .genre-btn { background: #0f3460; border: none; color: #eee; padding: .28rem .75rem;
-                 border-radius: 999px; cursor: pointer; font-size: .8rem; transition: background .15s; }
+    /* ── Status strip ────────────────────────────────────── */
+    .status-strip { display: flex; gap: .8rem; flex-wrap: wrap; font-size: .75rem; color: #aaa; }
+    .status-item { display: flex; align-items: center; gap: .3rem; }
+    .dot { width: .55rem; height: .55rem; border-radius: 50%; background: #444; display: inline-block; }
+    .dot.green { background: #5dbb80; }
+    .dot.orange { background: #cc8800; }
+    .dot.red    { background: #bb5555; }
+
+    /* ── Genre filter ────────────────────────────────────── */
+    .genre-list { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .genre-btn { background: #0f3460; border: none; color: #eee; padding: .25rem .7rem;
+                 border-radius: 999px; cursor: pointer; font-size: .78rem; transition: background .15s; }
     .genre-btn:hover, .genre-btn.active { background: #e94560; }
 
-    /* ── Search ───────────────────────────────────────────── */
+    /* ── Search ──────────────────────────────────────────── */
     #search-box { background: #0f3460; border: 1px solid #1e4080; border-radius: 6px;
-                  color: #eee; padding: .4rem .8rem; font-size: .85rem; width: 100%;
-                  margin-bottom: .8rem; outline: none; }
+                  color: #eee; padding: .38rem .75rem; font-size: .82rem; width: 100%;
+                  margin: .6rem 0 .4rem; outline: none; }
     #search-box::placeholder { color: #667; }
 
-    /* ── Station list ─────────────────────────────────────── */
-    #stations { margin-top: .5rem; }
-    .station-row { display: flex; justify-content: space-between; align-items: center;
-                   padding: .45rem 0; border-bottom: 1px solid #0f3460; gap: .5rem; }
+    /* ── Station list ───────────────────────────────────── */
+    #stations { }
+    #stations-info { font-size: .75rem; color: #667; margin-bottom: .4rem; }
+    .station-row { display: flex; align-items: center; gap: .4rem;
+                   padding: .38rem 0; border-bottom: 1px solid #0f3460; }
     .station-row:last-child { border-bottom: none; }
-    .station-row.playing { background: linear-gradient(90deg,rgba(233,69,96,.08),transparent); border-radius: 4px; padding-left: .4rem; }
-    .station-name { font-size: .9rem; font-weight: 500; }
-    .station-meta { font-size: .72rem; color: #aaa; }
-    .play-btn { background: #e94560; border: none; color: #fff; padding: .28rem .75rem;
-                border-radius: 4px; cursor: pointer; font-size: .8rem; white-space: nowrap;
-                flex-shrink: 0; transition: background .15s; }
+    .station-row.playing { background: linear-gradient(90deg,rgba(93,187,128,.08),transparent);
+                            border-radius: 4px; padding-left: .35rem; }
+    .station-info { flex: 1; min-width: 0; }
+    .station-name { font-size: .88rem; font-weight: 500; white-space: nowrap;
+                    overflow: hidden; text-overflow: ellipsis; }
+    .station-meta { font-size: .7rem; color: #aaa; }
+    .play-btn { background: #e94560; border: none; color: #fff; padding: .25rem .65rem;
+                border-radius: 4px; cursor: pointer; font-size: .78rem; white-space: nowrap;
+                flex-shrink: 0; transition: background .15s; min-width: 3.5rem; text-align: center; }
     .play-btn:hover { background: #c73652; }
     .play-btn.active { background: #1a6b3a; }
     .play-btn.active:hover { background: #e94560; }
-
-    #load-more { display: block; width: 100%; margin-top: .8rem; background: #0f3460; border: none;
-                 color: #eee; padding: .5rem; border-radius: 6px; cursor: pointer; font-size: .85rem; }
+    #load-more { display: block; width: 100%; margin-top: .7rem; background: #0f3460; border: none;
+                 color: #eee; padding: .45rem; border-radius: 6px; cursor: pointer; font-size: .82rem; }
     #load-more:hover { background: #1e4080; }
 
-    /* ── Toast ────────────────────────────────────────────── */
-    #toast { position: fixed; bottom: 1.2rem; right: 1.2rem; background: #e94560; color: #fff;
-             padding: .55rem 1rem; border-radius: 6px; display: none; font-size: .85rem;
+    /* ── Toast ───────────────────────────────────────────── */
+    #toast { position: fixed; bottom: 1rem; right: 1rem; background: #e94560; color: #fff;
+             padding: .5rem .9rem; border-radius: 6px; display: none; font-size: .82rem;
              max-width: 280px; word-break: break-word; z-index: 999; }
-
-    /* ── Info row ─────────────────────────────────────────── */
-    .info-row { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-    .info-item label { display: block; font-size: .72rem; color: #aaa; }
-    .info-item span  { font-size: .9rem; font-weight: bold; }
   </style>
 </head>
 <body>
 <header>
   <h1>&#127925; SqueezeCloud</h1>
   <span class="badge" id="srv-version">v…</span>
-  <span class="badge" id="device-mac">устройство: …</span>
+  <span class="badge" id="device-badge">устройство: …</span>
   <span class="badge green" id="np-badge" style="display:none">&#9654; Играе</span>
 </header>
+
 <main>
+
+  <!-- Connection status -->
+  <div class="card">
+    <h2>Статус</h2>
+    <div class="status-strip">
+      <div class="status-item"><span class="dot" id="dot-srv"></span><span>Сървър</span></div>
+      <div class="status-item"><span class="dot" id="dot-comet"></span><span id="comet-label">Squeezebox CometD</span></div>
+      <div class="status-item"><span class="dot" id="dot-tcp"></span><span id="tcp-label">Squeezebox TCP</span></div>
+      <div class="status-item"><span style="color:#aaa">MAC:</span>&nbsp;<span id="dev-mac">—</span></div>
+    </div>
+  </div>
 
   <!-- Now Playing -->
   <div class="card" id="np-card">
@@ -367,95 +394,191 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
       <div class="np-text">
         <div class="np-name" id="np-name">—</div>
         <div class="np-sub"  id="np-url">—</div>
+        <div class="np-source" id="np-source"></div>
       </div>
       <div class="np-controls">
         <button class="ctrl-btn" id="btn-pause" title="Пауза / Продължи" onclick="togglePause()">&#9646;&#9646;</button>
         <button class="ctrl-btn stop-btn" title="Стоп" onclick="stopPlayback()">&#9632;</button>
         <div class="vol-row">
           <span>&#128266;</span>
-          <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVolume(this.value)">
+          <input type="range" id="vol-slider" min="0" max="100" value="80"
+                 oninput="onVolumeInput(this.value)" onchange="onVolumeCommit(this.value)">
           <span id="vol-label">80%</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Server status -->
-  <div class="card">
-    <h2>Статус на сървъра</h2>
-    <div class="info-row">
-      <div class="info-item"><label>Сървър</label><span id="srv-name">…</span></div>
-      <div class="info-item"><label>Версия</label><span id="srv-ver">…</span></div>
-      <div class="info-item"><label>MAC на устройство</label><span id="dev-mac">…</span></div>
-    </div>
-  </div>
-
   <!-- Radio stations -->
   <div class="card">
     <h2>Радио станции</h2>
-    <div class="genre-list" id="genre-list">Зареждане…</div>
-    <br>
+    <div class="genre-list" id="genre-list"><span style="color:#667">Зареждане…</span></div>
     <input type="search" id="search-box" placeholder="&#128269; Търси станция…" oninput="onSearch(this.value)">
-    <div id="stations"></div>
+    <div id="stations-info"></div>
+    <div id="stations"><p style="color:#667">Зареждане на станции…</p></div>
     <button id="load-more" onclick="loadMore()" style="display:none">Покажи още</button>
   </div>
 
 </main>
 <div id="toast"></div>
-
-<!-- Hidden HTML5 audio element used for browser-side playback -->
 <audio id="audio-player" preload="none"></audio>
 
 <script>
   const audio = document.getElementById('audio-player');
-  let allStations = [];
-  let filteredStations = [];
-  let shownCount = 30;
-  let currentUrl = '';
-  let currentName = '';
 
-  // ── Init ────────────────────────────────────────────────────────────────────
+  let allStations      = [];
+  let filteredStations = [];
+  let shownCount       = 40;
+
+  // Playback state
+  let currentUrl   = '';   // URL the HTML5 audio is playing
+  let currentName  = '';
+  let serverUrl    = '';   // URL the server reports as playing
+  let serverName   = '';
+  let deviceOnline = false; // CometD active (device sending commands)
+  let tcpOnline    = false; // TCP Slim Protocol connected
+
+  // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
+    // Server version
     try {
       const r = await fetch('/api/v1/status');
       const d = await r.json();
-      document.getElementById('srv-name').textContent    = d.result.server_name;
-      document.getElementById('srv-ver').textContent     = d.result.version;
       document.getElementById('srv-version').textContent = 'v' + d.result.version;
-    } catch(e) {}
+      document.getElementById('dot-srv').classList.add('green');
+    } catch(e) { document.getElementById('dot-srv').classList.add('red'); }
 
+    // 1. Load static stations immediately (fast=true)
+    await loadStationsFast();
+
+    // 2. Poll status every 3 seconds
+    pollStatus();
+    setInterval(pollStatus, 3000);
+
+    // 3. Load full Radio Browser list in background
+    setTimeout(loadStationsFull, 500);
+  }
+
+  // ── Stations ──────────────────────────────────────────────────────────────
+  async function loadStationsFast() {
     try {
-      const r = await fetch('/api/v1/session');
+      const r = await fetch('/api/v1/radios?fast=true');
       const d = await r.json();
-      const mac = (d.result && d.result.playerid) || '—';
-      document.getElementById('dev-mac').textContent     = mac;
-      document.getElementById('device-mac').textContent = 'MAC: ' + mac;
-    } catch(_) {}
+      allStations      = d.stations || [];
+      filteredStations = allStations;
+      renderGenres(d.genres || []);
+      updateStationsInfo(allStations.length, false);
+      renderStations(filteredStations.slice(0, shownCount));
+      document.getElementById('load-more').style.display =
+        filteredStations.length > shownCount ? 'block' : 'none';
+    } catch(e) {
+      document.getElementById('stations').innerHTML =
+        '<p style="color:#c66">Грешка при зареждане на станции.</p>';
+    }
+  }
 
+  async function loadStationsFull() {
     try {
       const r = await fetch('/api/v1/radios');
       const d = await r.json();
-      allStations = d.stations || [];
-      filteredStations = allStations;
-      renderGenres(d.genres || []);
-      renderStations(filteredStations.slice(0, shownCount));
-      const more = document.getElementById('load-more');
-      more.style.display = filteredStations.length > shownCount ? 'block' : 'none';
-    } catch(e) { console.error('radios error', e); }
+      if ((d.stations || []).length > allStations.length) {
+        allStations      = d.stations || [];
+        filteredStations = allStations;
+        renderGenres(d.genres || []);
+        updateStationsInfo(allStations.length, true);
+        renderStations(filteredStations.slice(0, shownCount));
+        document.getElementById('load-more').style.display =
+          filteredStations.length > shownCount ? 'block' : 'none';
+      }
+    } catch(e) {}
+  }
 
-    // Restore any in-progress playback
+  function updateStationsInfo(count, full) {
+    document.getElementById('stations-info').textContent =
+      count + ' станции' + (full ? '' : ' (бързо зареждане — пълният списък се зарежда…)');
+  }
+
+  // ── Status polling ─────────────────────────────────────────────────────────
+  async function pollStatus() {
     try {
       const r = await fetch('/api/v1/now_playing');
       const d = await r.json();
-      if (d.mode === 'play' && d.url) {
-        currentUrl  = d.url;
-        currentName = d.name || d.url;
-        startAudio(d.url, d.name, false);
+
+      deviceOnline = !!d.comet_active;
+      tcpOnline    = !!d.device_connected;
+
+      // Update status dots
+      document.getElementById('dot-comet').className = 'dot ' + (deviceOnline ? 'green' : 'red');
+      document.getElementById('dot-tcp').className   = 'dot ' + (tcpOnline    ? 'green' : 'orange');
+      document.getElementById('comet-label').textContent =
+        'Squeezebox' + (deviceOnline && d.device_mac ? ' ' + d.device_mac : ' (не свързан)');
+      document.getElementById('tcp-label').textContent =
+        'TCP аудио ' + (tcpOnline ? '(свързан)' : '(не свързан — локален плейър)');
+      document.getElementById('dev-mac').textContent = d.device_mac || '—';
+      document.getElementById('device-badge').textContent =
+        'MAC: ' + (d.device_mac || '—');
+
+      // Volume
+      if (d.volume !== undefined) {
+        const v = d.volume;
+        document.getElementById('vol-slider').value = v;
+        document.getElementById('vol-label').textContent = v + '%';
+        audio.volume = v / 100;
+      }
+
+      // Now-playing from server
+      const newServerUrl  = (d.mode === 'play') ? (d.url  || '') : '';
+      const newServerName = (d.mode === 'play') ? (d.name || '') : '';
+
+      if (newServerUrl !== serverUrl) {
+        serverUrl  = newServerUrl;
+        serverName = newServerName;
+
+        if (serverUrl) {
+          // Server started playing something (could be from Squeezebox hardware)
+          showNowPlaying(serverName, serverUrl, tcpOnline ? 'device' : 'local');
+          refreshRows();
+          document.getElementById('np-badge').style.display = 'inline';
+        } else {
+          // Server stopped
+          if (!currentUrl) {  // only collapse card if browser isn't also playing
+            hideNowPlaying();
+          }
+          refreshRows();
+        }
       }
     } catch(_) {}
   }
 
-  // ── Genre filter ────────────────────────────────────────────────────────────
+  // ── Now-Playing display ────────────────────────────────────────────────────
+  function showNowPlaying(name, url, source) {
+    const card = document.getElementById('np-card');
+    card.classList.add('active');
+    document.getElementById('np-name').textContent = name || '—';
+    document.getElementById('np-url').textContent  = url;
+    document.getElementById('np-icon').classList.remove('paused');
+    document.getElementById('btn-pause').textContent = '⏸';
+    document.getElementById('np-badge').style.display = 'inline';
+
+    const srcEl = document.getElementById('np-source');
+    if (source === 'device') {
+      srcEl.className = 'np-source device';
+      srcEl.textContent = '▶ Squeezebox устройство';
+    } else if (source === 'browser') {
+      srcEl.className = 'np-source browser';
+      srcEl.textContent = '▶ Браузър (HTML5)';
+    } else {
+      srcEl.className = 'np-source local';
+      srcEl.textContent = '▶ Локален плейър (сървър)';
+    }
+  }
+
+  function hideNowPlaying() {
+    document.getElementById('np-card').classList.remove('active');
+    document.getElementById('np-badge').style.display = 'none';
+  }
+
+  // ── Genre filter ───────────────────────────────────────────────────────────
   function renderGenres(genres) {
     const el = document.getElementById('genre-list');
     el.innerHTML = '';
@@ -465,7 +588,7 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     all.addEventListener('click', () => {
       setActive(all);
       filteredStations = allStations;
-      shownCount = 30;
+      shownCount = 40;
       renderStations(filteredStations.slice(0, shownCount));
       document.getElementById('load-more').style.display =
         filteredStations.length > shownCount ? 'block' : 'none';
@@ -478,7 +601,7 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
       btn.addEventListener('click', () => {
         setActive(btn);
         filteredStations = allStations.filter(s => (s.genre||'').toLowerCase() === g.toLowerCase());
-        shownCount = 30;
+        shownCount = 40;
         renderStations(filteredStations.slice(0, shownCount));
         document.getElementById('load-more').style.display =
           filteredStations.length > shownCount ? 'block' : 'none';
@@ -492,43 +615,42 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     btn.classList.add('active');
   }
 
-  // ── Search ──────────────────────────────────────────────────────────────────
   function onSearch(q) {
     const lq = q.toLowerCase();
-    filteredStations = lq
-      ? allStations.filter(s => s.name.toLowerCase().includes(lq))
-      : allStations;
-    shownCount = 30;
+    filteredStations = lq ? allStations.filter(s => s.name.toLowerCase().includes(lq)) : allStations;
+    shownCount = 40;
     renderStations(filteredStations.slice(0, shownCount));
     document.getElementById('load-more').style.display =
       filteredStations.length > shownCount ? 'block' : 'none';
   }
 
-  // ── Load more ───────────────────────────────────────────────────────────────
   function loadMore() {
-    shownCount += 30;
+    shownCount += 40;
     renderStations(filteredStations.slice(0, shownCount));
     document.getElementById('load-more').style.display =
       filteredStations.length > shownCount ? 'block' : 'none';
   }
 
-  // ── Render stations ─────────────────────────────────────────────────────────
+  // ── Station list render ────────────────────────────────────────────────────
   function renderStations(stations) {
     const el = document.getElementById('stations');
     el.innerHTML = '';
+    const playingUrl = serverUrl || currentUrl;
     if (!stations.length) {
       const p = document.createElement('p');
-      p.style.color = '#aaa';
+      p.style.color = '#667';
       p.textContent = 'Няма станции.';
       el.appendChild(p);
       return;
     }
     stations.forEach(s => {
+      const isPlaying = s.url === playingUrl;
       const row = document.createElement('div');
-      row.className = 'station-row' + (s.url === currentUrl ? ' playing' : '');
+      row.className = 'station-row' + (isPlaying ? ' playing' : '');
       row.dataset.url = s.url;
 
       const info = document.createElement('div');
+      info.className = 'station-info';
       const nameEl = document.createElement('div');
       nameEl.className = 'station-name';
       nameEl.textContent = s.name || '';
@@ -540,14 +662,11 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
       info.appendChild(metaEl);
 
       const btn = document.createElement('button');
-      btn.className = 'play-btn' + (s.url === currentUrl ? ' active' : '');
-      btn.textContent = s.url === currentUrl ? '■ Стоп' : '▶ Пусни';
+      btn.className = 'play-btn' + (isPlaying ? ' active' : '');
+      btn.textContent = isPlaying ? '■ Стоп' : '▶ Пусни';
       btn.addEventListener('click', () => {
-        if (s.url === currentUrl) {
-          stopPlayback();
-        } else {
-          playStation(s.url, s.name);
-        }
+        if (isPlaying) stopPlayback();
+        else playStation(s.url, s.name);
       });
 
       row.appendChild(info);
@@ -556,9 +675,22 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     });
   }
 
-  // ── Playback ────────────────────────────────────────────────────────────────
+  function refreshRows() {
+    const playingUrl = serverUrl || currentUrl;
+    document.querySelectorAll('.station-row').forEach(row => {
+      const url = row.dataset.url;
+      const btn = row.querySelector('.play-btn');
+      if (!btn) return;
+      const active = url === playingUrl;
+      row.classList.toggle('playing', active);
+      btn.classList.toggle('active', active);
+      btn.textContent = active ? '■ Стоп' : '▶ Пусни';
+    });
+  }
+
+  // ── Playback ───────────────────────────────────────────────────────────────
   async function playStation(url, name) {
-    // Tell server (for status tracking & physical Squeezebox / local player)
+    // POST to server — triggers Squeezebox strm OR local player
     try {
       await fetch('/api/v1/play', {
         method: 'POST',
@@ -567,42 +699,30 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
       });
     } catch(_) {}
 
+    // Also start HTML5 audio in the browser
     currentUrl  = url;
     currentName = name || url;
-    startAudio(url, name, true);
-  }
-
-  function startAudio(url, name, notify) {
-    // Use the stream proxy so the browser avoids direct HTTPS/CORS issues
     const proxyUrl = '/stream?url=' + encodeURIComponent(url);
     audio.src = proxyUrl;
     audio.volume = document.getElementById('vol-slider').value / 100;
-    audio.play().catch(e => {
-      // Autoplay blocked — show message, user must click again
-      showToast('Натиснете ▶ Пусни за да стартирате аудиото');
-    });
-    updateNowPlaying(name || url, url, false);
-    if (notify) showToast('▶ ' + (name || url));
-    refreshRows();
-  }
+    audio.play().catch(() => showToast('Натиснете ▶ Пусни отново (autoplay блокиран)'));
 
-  function updateNowPlaying(name, url, paused) {
-    const card = document.getElementById('np-card');
-    card.classList.add('active');
-    document.getElementById('np-name').textContent = name;
-    document.getElementById('np-url').textContent  = url;
-    document.getElementById('np-icon').classList.toggle('paused', paused);
-    document.getElementById('np-badge').style.display = 'inline';
-    document.getElementById('btn-pause').textContent  = paused ? '▶' : '⏸';
+    serverUrl  = url;
+    serverName = name;
+    showNowPlaying(name || url, url, 'browser');
+    refreshRows();
+    showToast('▶ ' + (name || url));
   }
 
   function togglePause() {
     if (audio.paused) {
       audio.play();
-      updateNowPlaying(currentName, currentUrl, false);
+      document.getElementById('np-icon').classList.remove('paused');
+      document.getElementById('btn-pause').textContent = '⏸';
     } else {
       audio.pause();
-      updateNowPlaying(currentName, currentUrl, true);
+      document.getElementById('np-icon').classList.add('paused');
+      document.getElementById('btn-pause').textContent = '▶';
     }
   }
 
@@ -611,36 +731,33 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     audio.src = '';
     currentUrl = '';
     currentName = '';
-    document.getElementById('np-card').classList.remove('active');
-    document.getElementById('np-badge').style.display = 'none';
-    try { await fetch('/api/v1/stop', {method: 'POST'}); } catch(_) {}
+    serverUrl  = '';
+    serverName = '';
+    hideNowPlaying();
     refreshRows();
+    try { await fetch('/api/v1/stop', {method: 'POST'}); } catch(_) {}
     showToast('■ Стоп');
   }
 
-  function setVolume(v) {
+  // ── Volume ─────────────────────────────────────────────────────────────────
+  let _volTimer = null;
+  function onVolumeInput(v) {
     audio.volume = v / 100;
     document.getElementById('vol-label').textContent = v + '%';
   }
-
-  function refreshRows() {
-    document.querySelectorAll('.station-row').forEach(row => {
-      const url = row.dataset.url;
-      const btn = row.querySelector('.play-btn');
-      if (!btn) return;
-      if (url === currentUrl) {
-        row.classList.add('playing');
-        btn.classList.add('active');
-        btn.textContent = '■ Стоп';
-      } else {
-        row.classList.remove('playing');
-        btn.classList.remove('active');
-        btn.textContent = '▶ Пусни';
-      }
-    });
+  function onVolumeCommit(v) {
+    // Debounce: only send to server after slider settles
+    clearTimeout(_volTimer);
+    _volTimer = setTimeout(() => {
+      fetch('/api/v1/volume', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({level: parseInt(v)}),
+      }).catch(() => {});
+    }, 300);
   }
 
-  // ── Toast ────────────────────────────────────────────────────────────────────
+  // ── Toast ──────────────────────────────────────────────────────────────────
   function showToast(text) {
     const el = document.getElementById('toast');
     el.textContent = text;
@@ -649,10 +766,7 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     el._t = setTimeout(() => { el.style.display = 'none'; }, 3000);
   }
 
-  // Audio events
-  audio.addEventListener('error', () => {
-    showToast('⚠ Грешка при зареждане на потока');
-  });
+  audio.addEventListener('error', () => showToast('⚠ Грешка при зареждане на потока'));
 
   init();
 </script>
@@ -772,7 +886,8 @@ async def cometd_get(request: Request):
 
 
 async def _handle_comet_message(msg: dict, channel: str) -> dict:
-    global _device_mac, _status_channel
+    global _device_mac, _status_channel, _comet_last_seen
+    _comet_last_seen = time.time()
     # ── /meta/handshake ──────────────────────────────────────────────────────
     if channel == "/meta/handshake":
         client_id = _new_client_id()
@@ -1014,7 +1129,7 @@ async def jsonrpc(request: Request):
 @app.post("/api/v1/play")
 async def play_from_phone(request: Request):
     """
-    Пусни URL на Squeezebox от телефон или друго устройство.
+    Пусни URL на Squeezebox/локален плейър от уеб UI или телефон.
     Body: {"url": "stream-url", "name": "Station Name"}
     """
     global _now_playing
@@ -1029,25 +1144,84 @@ async def play_from_phone(request: Request):
         return JSONResponse({"status": "error", "error": "url is required"}, status_code=400)
 
     _now_playing = {"url": url, "name": name, "started_at": time.time()}
-    log.info("[play-from-phone] %s  (%s)", name, url)
+    log.info("[play-from-web] %s  (%s)", name, url)
+    # Send to Squeezebox (TCP strm) or local player
+    asyncio.create_task(_send_strm_play(url, name))
     return {"status": "ok", "playing": {"url": url, "name": name}}
 
 
 @app.get("/api/v1/now_playing")
 async def now_playing_status():
-    """Върни текущо пусканото — удобно за телефонен UI."""
+    """Върни текущо пусканото + статус на свързване."""
+    device_connected = _slim_writer is not None
+    comet_active = (time.time() - _comet_last_seen) < 30 if _comet_last_seen else False
     if _now_playing:
-        return {"status": "ok", "mode": "play", "url": _now_playing.get("url"), "name": _now_playing.get("name")}
-    return {"status": "ok", "mode": "stop"}
+        return {
+            "status": "ok",
+            "mode": "play",
+            "url":  _now_playing.get("url"),
+            "name": _now_playing.get("name"),
+            "started_at": _now_playing.get("started_at"),
+            "volume": _player_volume,
+            "device_connected": device_connected,
+            "comet_active": comet_active,
+            "device_mac": _device_mac,
+        }
+    return {
+        "status": "ok",
+        "mode": "stop",
+        "volume": _player_volume,
+        "device_connected": device_connected,
+        "comet_active": comet_active,
+        "device_mac": _device_mac,
+    }
 
 
 @app.post("/api/v1/stop")
 async def stop_playback():
-    """Спри пускането от телефон или друго устройство."""
+    """Спри пускането — изпраща strm q до Squeezebox и/или спира локалния плейър."""
     global _now_playing
     _now_playing = {}
-    log.info("[stop] Пускането спряно")
+    log.info("[stop] Пускането спряно от уеб UI")
+    asyncio.create_task(_send_strm_stop())
     return {"status": "ok", "mode": "stop"}
+
+
+@app.get("/api/v1/volume")
+async def get_volume():
+    """Върни текущата сила на звука (0-100)."""
+    return {"status": "ok", "volume": _player_volume}
+
+
+@app.post("/api/v1/volume")
+async def set_volume(request: Request):
+    """Задай сила на звука. Body: {"level": 0-100}"""
+    global _player_volume
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"status": "error", "error": "Invalid JSON"}, status_code=400)
+    level = max(0, min(100, int(body.get("level", _player_volume))))
+    _player_volume = level
+    asyncio.create_task(_send_audg(level))
+    log.info("[volume] Зададен: %d%%", level)
+    return {"status": "ok", "volume": level}
+
+
+async def _send_audg(level: int):
+    """Send audg (audio gain) command to Squeezebox for volume control."""
+    global _slim_writer
+    if not _slim_writer:
+        return
+    # gain is a 32-bit fixed-point: 65536 = 100% (0 dB)
+    gain = max(0, min(65536, int(level * 65536 / 100)))
+    try:
+        data = struct.pack("!IIBB", gain, gain, 1, 255) + b"\x00"
+        _slim_send(_slim_writer, b"audg", data)
+        await _slim_writer.drain()
+        log.debug("[audg] volume → %d%%  (gain=%d)", level, gain)
+    except Exception as e:
+        log.warning("[audg] Грешка: %s", e)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1581,8 +1755,14 @@ async def radio_browse(
     genre: Optional[str] = None,
     country: Optional[str] = None,
     search: Optional[str] = None,
+    fast: bool = False,
 ):
-    stations = await get_radio_stations()
+    if fast:
+        # Return built-in stations immediately, trigger background Radio Browser fetch
+        stations = list(CUSTOM_STATIONS) + list(STATIC_STATIONS)
+        asyncio.create_task(_bg_prefetch_stations())
+    else:
+        stations = await get_radio_stations()
 
     if genre:
         stations = [s for s in stations if genre.lower() in (s.get("genre") or "").lower()]
@@ -1597,8 +1777,23 @@ async def radio_browse(
         "status": "ok",
         "count": len(stations),
         "genres": genres,
-        "stations": stations[:100],
+        "stations": stations[:300],
     }
+
+
+_bg_prefetching = False
+
+
+async def _bg_prefetch_stations():
+    """Populate Radio Browser cache in the background."""
+    global _bg_prefetching
+    if _bg_prefetching or cache_get("stations:all"):
+        return
+    _bg_prefetching = True
+    try:
+        await get_radio_stations()
+    finally:
+        _bg_prefetching = False
 
 
 async def get_radio_stations() -> list:
