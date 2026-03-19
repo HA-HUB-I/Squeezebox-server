@@ -43,6 +43,10 @@ def cache_set(key: str, val):
 # ── Глобален MAC на устройството (научаваме от HELO) ─────────────────────────
 _device_mac = "00:04:20:2c:90:b1"  # default, обновява се от HELO/Comet
 
+# ── Now-playing state (обновява се от playlist play/stop команди) ─────────────
+# { "url": "...", "name": "..." }  или  {}  ако нищо не се пуска
+_now_playing: dict = {}
+
 # ── Конфигурация ──────────────────────────────────────────────────────────────
 CONFIG = {
     "server_name": "SqueezeCloud",
@@ -68,6 +72,30 @@ STATIC_STATIONS = [
     {"name": "Jazz24",               "url": "https://streams.jazz24.org/jazz24_mp3",                          "genre": "Jazz","country": "US"},
     {"name": "1.FM Jazz & Blues",    "url": "https://strm112.1.fm/jazzandblues_mobile_mp3",             "genre": "Jazz","country": "US"},
 ]
+
+# ── Потребителски станции от stations.json (без зависимост от Radio Browser) ──
+# Създай squeezecloud/stations.json за да добавиш свои станции.
+# Формат: [{"name": "...", "url": "...", "genre": "...", "country": "..."}, ...]
+import os as _os, pathlib as _pathlib
+
+def _load_custom_stations() -> list:
+    _path = _pathlib.Path(_os.path.dirname(_os.path.abspath(__file__))) / "stations.json"
+    if not _path.exists():
+        return []
+    try:
+        with open(_path, "r", encoding="utf-8") as _f:
+            data = json.load(_f)
+        if isinstance(data, list):
+            log.info("Заредени %d потребителски станции от stations.json", len(data))
+            return data
+        log.warning("stations.json не е масив (list) — пропуснат")
+    except json.JSONDecodeError as e:
+        log.warning("stations.json е невалиден JSON: %s", e)
+    except Exception as e:
+        log.warning("Грешка при четене на stations.json: %s", e)
+    return []
+
+CUSTOM_STATIONS: list = _load_custom_stations()
 
 # ── Подкасти ──────────────────────────────────────────────────────────────────
 PODCAST_FEEDS = [
@@ -674,6 +702,119 @@ async def jsonrpc(request: Request):
     return {"id": rpc_id, "method": "slim.request", "result": result}
 
 
+# ═════════════════════════════════════════════════════════════════════════════
+# PLAY FROM PHONE / REMOTE PLAY
+# Телефонът (или всяко устройство в мрежата) може да изпрати POST заявка
+# към /api/v1/play с {"url": "...", "name": "..."} и Squeezebox ще пусне URL-а.
+# Следващата поллинг заявка за "status" ще върне mode:"play" с новото URL.
+#
+# SPOTIFY:
+# Spotify Connect изисква регистрирана Spotify Premium сметка и librespot.
+# За "play from phone" без Premium — изпрати директен stream URL (напр. от
+# youtube-dl/yt-dlp) към /api/v1/play.
+# Пример от телефон:
+#   curl -X POST http://<server-ip>:9000/api/v1/play \
+#        -H "Content-Type: application/json" \
+#        -d '{"url":"https://stream.nrj.bg/nrj-128.mp3","name":"NRJ Bulgaria"}'
+# ═════════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/v1/play")
+async def play_from_phone(request: Request):
+    """
+    Пусни URL на Squeezebox от телефон или друго устройство.
+    Body: {"url": "stream-url", "name": "Station Name"}
+    """
+    global _now_playing
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"status": "error", "error": "Invalid JSON"}, status_code=400)
+
+    url  = (body.get("url") or "").strip()
+    name = (body.get("name") or "").strip()
+    if not url:
+        return JSONResponse({"status": "error", "error": "url is required"}, status_code=400)
+
+    _now_playing = {"url": url, "name": name, "started_at": time.time()}
+    log.info("[play-from-phone] %s  (%s)", name, url)
+    return {"status": "ok", "playing": {"url": url, "name": name}}
+
+
+@app.get("/api/v1/now_playing")
+async def now_playing_status():
+    """Върни текущо пусканото — удобно за телефонен UI."""
+    if _now_playing:
+        return {"status": "ok", "mode": "play", "url": _now_playing.get("url"), "name": _now_playing.get("name")}
+    return {"status": "ok", "mode": "stop"}
+
+
+@app.post("/api/v1/stop")
+async def stop_playback():
+    """Спри пускането от телефон или друго устройство."""
+    global _now_playing
+    _now_playing = {}
+    log.info("[stop] Пускането спряно")
+    return {"status": "ok", "mode": "stop"}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STATIONS — управление на потребителски станции (stations.json)
+# GET  /api/v1/stations          → списък на потребителски станции
+# POST /api/v1/stations          → добави станция
+# DELETE /api/v1/stations/{idx}  → изтрий станция по индекс
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _save_custom_stations():
+    path = _pathlib.Path(_os.path.dirname(_os.path.abspath(__file__))) / "stations.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(CUSTOM_STATIONS, f, ensure_ascii=False, indent=2)
+
+
+@app.get("/api/v1/stations")
+async def list_custom_stations():
+    return {"status": "ok", "count": len(CUSTOM_STATIONS), "stations": CUSTOM_STATIONS}
+
+
+@app.post("/api/v1/stations")
+async def add_custom_station(request: Request):
+    """Добави станция към stations.json. Body: {"name":"...","url":"...","genre":"...","country":"..."}"""
+    global CUSTOM_STATIONS
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"status": "error", "error": "Invalid JSON"}, status_code=400)
+
+    url  = (body.get("url") or "").strip()
+    name = (body.get("name") or "").strip()
+    if not url or not name:
+        return JSONResponse({"status": "error", "error": "name and url are required"}, status_code=400)
+
+    station = {
+        "name": name,
+        "url": url,
+        "genre": (body.get("genre") or "Music").strip(),
+        "country": (body.get("country") or "").strip(),
+    }
+    CUSTOM_STATIONS.append(station)
+    _save_custom_stations()
+    # Invalidate station cache so new station appears immediately
+    _cache.pop("stations:all", None)
+    log.info("[stations] Добавена: %s (%s)", name, url)
+    return {"status": "ok", "station": station, "total": len(CUSTOM_STATIONS)}
+
+
+@app.delete("/api/v1/stations/{idx}")
+async def delete_custom_station(idx: int):
+    global CUSTOM_STATIONS
+    if idx < 0 or idx >= len(CUSTOM_STATIONS):
+        return JSONResponse({"status": "error", "error": "Index out of range"}, status_code=404)
+    removed = CUSTOM_STATIONS.pop(idx)
+    _save_custom_stations()
+    _cache.pop("stations:all", None)
+    log.info("[stations] Изтрита: %s", removed.get("name"))
+    return {"status": "ok", "removed": removed, "total": len(CUSTOM_STATIONS)}
+
+
 @app.api_route("/{path:path}", methods=["GET", "POST"])
 async def catch_all(request: Request, path: str):
     """Логва всички непознати endpoints"""
@@ -780,26 +921,58 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
         }
 
     elif command == "players":
+        mac = player_mac or _device_mac
         return {
             "count": 1,
             "players_loop": [{
-                "playerid": player_mac,
+                "playerid": mac,
                 "name": "Squeezebox Radio",
                 "model": "squeezebox_radio",
-                "isplaying": 0,
+                "isplaying": 1 if _now_playing else 0,
                 "connected": 1,
             }]
         }
 
     elif command == "status":
+        mac = player_mac or _device_mac
+        if _now_playing:
+            mode = "play"
+            playlist_loop = [{
+                "id": "current",
+                "title": _now_playing.get("name", ""),
+                "url": _now_playing.get("url", ""),
+                "duration": 0,
+                "remote": 1,
+            }]
+            remote_meta = {"title": _now_playing.get("name", ""), "url": _now_playing.get("url", "")}
+        else:
+            mode = "stop"
+            playlist_loop = []
+            remote_meta = {}
         return {
-            "playerid": player_mac,
+            "playerid": mac,
             "name": "Squeezebox Radio",
-            "mode": "stop",
+            "mode": mode,
             "mixer_volume": 50,
             "playlist_cur_index": 0,
-            "playlist_loop": [],
+        "playlist_timestamp": _now_playing.get("started_at", time.time()),
+            "playlist_loop": playlist_loop,
+            "remoteMeta": remote_meta,
         }
+
+    elif command == "playlist":
+        # cmd = ["playlist", "play"|"stop"|"clear", url, name]
+        global _now_playing
+        sub = str(cmd[1]).lower() if len(cmd) > 1 else ""
+        if sub == "play" and len(cmd) > 2:
+            url  = cmd[2]
+            name = cmd[3] if len(cmd) > 3 else ""
+            _now_playing = {"url": url, "name": name, "started_at": time.time()}
+            log.info("[playlist] Играе: %s  (%s)", name, url)
+        elif sub in ("stop", "clear", "pause"):
+            _now_playing = {}
+            log.info("[playlist] Спряно")
+        return {"ok": 1, "mode": "play" if _now_playing else "stop"}
 
     elif command in ("radios", "radio"):
         start = int(cmd[1]) if len(cmd) > 1 else 0
@@ -829,6 +1002,13 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                         "type": "audio",
                         "url": s["url"],
                         "isaudio": 1,
+                        "actions": {
+                            "go": {
+                                "player": 0,
+                                "cmd": ["playlist", "play", s["url"], s["name"]],
+                                "nextWindow": "nowPlaying",
+                            }
+                        },
                     }
                     for i, s in enumerate(slice_)
                 ],
@@ -844,6 +1024,12 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                     "item_id": f"genre:{g}",
                     "hasitems": 1,
                     "type": "playlist",
+                    "actions": {
+                        "go": {
+                            "player": 0,
+                            "cmd": ["radios", 0, 100, f"item_id:genre:{g}"],
+                        }
+                    },
                 }
                 for g in genres
             ]
@@ -854,6 +1040,12 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                 "item_id": "genre:All",
                 "hasitems": 1,
                 "type": "playlist",
+                "actions": {
+                    "go": {
+                        "player": 0,
+                        "cmd": ["radios", 0, 100, "item_id:genre:All"],
+                    }
+                },
             }
             items = ([all_item] + genre_items)[start:start + count]
             total = len(genres) + 1  # genres + "All Stations"
@@ -873,8 +1065,19 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                 "count": len(PODCAST_FEEDS),
                 "offset": 0,
                 "item_loop": [
-                    {"id": f"podcast:{i}", "text": f["name"], "type": "playlist",
-                     "hasitems": 1, "item_id": f"podcast:{i}"}
+                    {
+                        "id": f"podcast:{i}",
+                        "text": f["name"],
+                        "type": "playlist",
+                        "hasitems": 1,
+                        "item_id": f"podcast:{i}",
+                        "actions": {
+                            "go": {
+                                "player": 0,
+                                "cmd": ["podcasts", 0, 100, f"item_id:podcast:{i}"],
+                            }
+                        },
+                    }
                     for i, f in enumerate(PODCAST_FEEDS)
                 ]
             }
@@ -887,8 +1090,20 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                 "count": len(episodes),
                 "offset": start,
                 "item_loop": [
-                    {"id": f"ep:{feed_idx}:{i}", "text": ep["title"],
-                     "type": "audio", "url": ep["url"], "isaudio": 1}
+                    {
+                        "id": f"ep:{feed_idx}:{i}",
+                        "text": ep["title"],
+                        "type": "audio",
+                        "url": ep["url"],
+                        "isaudio": 1,
+                        "actions": {
+                            "go": {
+                                "player": 0,
+                                "cmd": ["playlist", "play", ep["url"], ep["title"]],
+                                "nextWindow": "nowPlaying",
+                            }
+                        },
+                    }
                     for i, ep in enumerate(slice_)
                 ]
             }
@@ -968,6 +1183,13 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                     "url": s["url"],
                     "type": "audio",
                     "isaudio": 1,
+                    "actions": {
+                        "go": {
+                            "player": 0,
+                            "cmd": ["playlist", "play", s["url"], s["name"]],
+                            "nextWindow": "nowPlaying",
+                        }
+                    },
                 }
                 for i, s in enumerate(slice_)
             ]
@@ -1071,7 +1293,7 @@ async def get_radio_stations() -> list:
     except Exception as e:
         log.warning("Radio Browser API error: %s", e)
 
-    all_stations = STATIC_STATIONS + live
+    all_stations = CUSTOM_STATIONS + STATIC_STATIONS + live
     cache_set("stations:all", all_stations)
     return all_stations
 

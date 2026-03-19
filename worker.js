@@ -29,6 +29,10 @@ const CONFIG = {
   defaultTimezone: "Europe/Sofia",
   // How long to keep "now playing" state in KV (seconds)
   nowPlayingTtl: 3600,
+  // How long to keep the last-seen device MAC in KV (seconds)
+  deviceMacTtl: 86400,
+  // Fallback player MAC used when the real MAC is not yet known
+  fallbackPlayerMac: "00:00:00:00:00:01",
 };
 
 // ─── STATIC RADIO STATIONS ───────────────────────────────────────────────────
@@ -97,7 +101,7 @@ export default {
 
       // Route requests
       if (path === "/api/v1/login" || path === "/user/login") {
-        response = handleLogin(url, request);
+        response = await handleLogin(url, request, env);
       } else if (path === "/api/v1/time") {
         response = handleTime();
       } else if (path === "/public/tz") {
@@ -141,12 +145,19 @@ export default {
 
 // ─── AUTH / LOGIN ─────────────────────────────────────────────────────────────
 
-function handleLogin(url, request) {
+async function handleLogin(url, request, env) {
   // Squeezebox sends MAC address as device ID
   // Accept any device — no real auth needed
   const mac = url.searchParams.get("mac") || 
                url.searchParams.get("u") || 
                "unknown";
+
+  // Persist MAC so other handlers (serverstatus, players) can reference it
+  if (mac && mac !== "unknown" && env && env.RADIO_KV) {
+    try {
+      await env.RADIO_KV.put("device:last_mac", mac, { expirationTtl: CONFIG.deviceMacTtl });
+    } catch (_) { /* KV unavailable */ }
+  }
 
   return jsonResponse({
     status: "ok",
@@ -219,7 +230,177 @@ function handleApps() {
   });
 }
 
-// ─── JSON-RPC HANDLER ─────────────────────────────────────────────────────────
+// ─── COMET/BAYEUX HANDLER ─────────────────────────────────────────────────────
+// The Squeezebox Radio uses Bayeux/Comet (streaming) for all server-push
+// notifications (serverstatus, playerstatus, menustatus). Without this endpoint
+// the device never receives player/menu data and the UI shows "nil".
+//
+// Cloudflare Workers cannot hold long-lived streaming connections, so we respond
+// immediately to every request and set advice.timeout=0 so the device reconnects
+// right away (polling loop). All pending subscription data is bundled in the same
+// HTTP response so the Comet.lua client processes it synchronously.
+
+function generateClientId() {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function handleComet(request, env) {
+  let messages;
+  try {
+    const body = await request.json();
+    messages = Array.isArray(body) ? body : [body];
+  } catch {
+    return jsonResponse([]);
+  }
+
+  const responses = [];
+
+  for (const msg of messages) {
+    const channel = msg.channel || "";
+
+    if (channel === "/meta/handshake") {
+      // Extract device MAC from ext.mac and persist it for other handlers.
+      const mac = msg.ext && msg.ext.mac ? msg.ext.mac : null;
+      if (mac && env && env.RADIO_KV) {
+        try {
+          await env.RADIO_KV.put("device:last_mac", mac, { expirationTtl: CONFIG.deviceMacTtl });
+        } catch (_) { /* KV unavailable */ }
+      }
+      responses.push({
+        channel: "/meta/handshake",
+        successful: true,
+        version: "1.0",
+        supportedConnectionTypes: ["long-polling", "streaming"],
+        clientId: generateClientId(),
+        // timeout:0 → device reconnects immediately (turns long-poll into poll)
+        advice: { interval: 0, timeout: 0, reconnect: "retry" },
+      });
+
+    } else if (channel === "/meta/connect" || channel === "/meta/reconnect") {
+      responses.push({
+        channel,
+        successful: true,
+        clientId: msg.clientId,
+        advice: { interval: 0, timeout: 0, reconnect: "retry" },
+      });
+
+    } else if (channel === "/meta/subscribe") {
+      responses.push({
+        channel: "/meta/subscribe",
+        successful: true,
+        clientId: msg.clientId,
+        subscription: msg.subscription,
+      });
+
+    } else if (channel === "/meta/disconnect") {
+      responses.push({
+        channel: "/meta/disconnect",
+        successful: true,
+        clientId: msg.clientId,
+      });
+
+    } else if (channel === "/slim/unsubscribe") {
+      responses.push({
+        channel: "/slim/unsubscribe",
+        successful: true,
+        id: msg.id,
+      });
+
+    } else if (channel === "/slim/subscribe") {
+      // Acknowledge the subscription, then immediately push current state.
+      // Comet.lua's _response() strips the clientId prefix from the channel
+      // and dispatches to the registered callback — so bundling data here works.
+      const data       = msg.data || {};
+      const reqArr     = Array.isArray(data.request) ? data.request : [];
+      const respChan   = data.response || "";
+      const playerid   = typeof reqArr[0] === "string" ? reqArr[0] : "";
+      const cmd        = Array.isArray(reqArr[1]) ? reqArr[1] : [];
+      const command    = String(cmd[0] || "");
+
+      responses.push({ channel: "/slim/subscribe", successful: true, id: msg.id });
+
+      if (respChan) {
+        let pushData = {};
+        switch (command) {
+          case "serverstatus":
+            pushData = await rpcServerStatus(env);
+            break;
+          case "status":
+            pushData = await rpcPlayerStatus(playerid, env);
+            break;
+          case "menustatus":
+            // Push initial home-menu items; directive "add" / playerId "all"
+            pushData = [playerid, _cometMenuItems(), "add", "all"];
+            break;
+          case "radios":
+            pushData = await rpcRadios(cmd, env);
+            break;
+          case "podcasts":
+            pushData = await rpcPodcasts(cmd, env);
+            break;
+          default:
+            pushData = { ok: 1 };
+        }
+        responses.push({ channel: respChan, id: msg.id, data: pushData });
+      }
+
+    } else if (channel === "/slim/request") {
+      // One-time request (rhttp side-channel).
+      const data     = msg.data || {};
+      const reqArr   = Array.isArray(data.request) ? data.request : [];
+      const respChan = data.response || "";
+      const playerid = typeof reqArr[0] === "string" ? reqArr[0] : "";
+      const cmd      = Array.isArray(reqArr[1]) ? reqArr[1] : [];
+      const command  = String(cmd[0] || "");
+
+      responses.push({ channel: "/slim/request", successful: true, id: msg.id });
+
+      if (respChan && msg.id != null) {
+        let pushData = {};
+        switch (command) {
+          case "serverstatus":
+            pushData = await rpcServerStatus(env);
+            break;
+          case "status":
+            pushData = await rpcPlayerStatus(playerid, env);
+            break;
+          case "players": {
+            let resolvedMac = playerid;
+            if (!resolvedMac && env && env.RADIO_KV) {
+              try { resolvedMac = (await env.RADIO_KV.get("device:last_mac")) || ""; } catch (_) { /* KV unavailable */ }
+            }
+            pushData = {
+              count: resolvedMac ? 1 : 0,
+              players_loop: resolvedMac ? [{ playerid: resolvedMac, name: "Squeezebox Radio", model: "squeezebox_radio", connected: 1, power: 1 }] : [],
+            };
+            break;
+          }
+          default:
+            pushData = { ok: 1 };
+        }
+        responses.push({ channel: respChan, id: msg.id, data: pushData });
+      }
+    }
+    // Unknown channels are silently ignored per Bayeux spec.
+  }
+
+  return jsonResponse(responses);
+}
+
+// Returns the same home-menu item_loop used by both the "menu" RPC command
+// and the initial menustatus CometD push.
+function _cometMenuItems() {
+  return [
+    { id: "radio",               node: "home", text: "Internet Radio", weight: 20, iconStyle: "hm_radio",               window: { windowId: "radio" },               actions: { go: { player: 0, cmd: ["radios", 0, 100] } } },
+    { id: "squeezecloudPodcasts", node: "home", text: "Podcasts",        weight: 25, iconStyle: "hm_squeezecloudPodcasts", window: { windowId: "squeezecloudPodcasts" }, actions: { go: { player: 0, cmd: ["podcasts", 0, 100] } } },
+    { id: "squeezecloud_weather", node: "home", text: "Weather",         weight: 30, iconStyle: "hm_squeezecloud_weather", window: { windowId: "squeezecloud_weather" }, actions: { go: { player: 0, cmd: ["weather"] } } },
+    { id: "squeezecloud_news",    node: "home", text: "News",            weight: 35, iconStyle: "hm_squeezecloud_news",    window: { windowId: "squeezecloud_news" },    actions: { go: { player: 0, cmd: ["news"] } } },
+  ];
+}
+
+
 
 async function handleJsonRpc(request, env) {
   let body;
@@ -245,11 +426,21 @@ async function handleJsonRpc(request, env) {
       result = await rpcServerStatus(env);
       break;
 
-    case "players":
+    case "players": {
+      // Use the MAC from params[0] if present; otherwise fall back to the
+      // last MAC stored in KV during login / CometD handshake.
+      let resolvedMac = playerMac;
+      if (!resolvedMac && env && env.RADIO_KV) {
+        try {
+          resolvedMac = (await env.RADIO_KV.get("device:last_mac")) || CONFIG.fallbackPlayerMac;
+        } catch (_) {
+          resolvedMac = CONFIG.fallbackPlayerMac;
+        }
+      }
       result = {
         count: 1,
         players_loop: [{
-          playerid: playerMac,
+          playerid: resolvedMac,
           name: "Squeezebox Radio",
           model: "squeezebox_radio",
           isplaying: 0,
@@ -257,6 +448,7 @@ async function handleJsonRpc(request, env) {
         }]
       };
       break;
+    }
 
     case "status":
       result = await rpcPlayerStatus(playerMac, env);
@@ -312,6 +504,16 @@ async function handleJsonRpc(request, env) {
       result = await rpcNews(env);
       break;
 
+    case "menu":
+      // Home-menu items requested by SlimMenusApplet on connect.
+      // SlimMenusApplet filters out id="radios" so we use id="radio".
+      result = {
+        count: 4,
+        offset: 0,
+        item_loop: _cometMenuItems(),
+      };
+      break;
+
     default:
       result = { ok: 1, count: 0 };
   }
@@ -326,12 +528,30 @@ async function handleJsonRpc(request, env) {
 // ─── RPC: SERVER STATUS ───────────────────────────────────────────────────────
 
 async function rpcServerStatus(env) {
+  // Retrieve the device MAC stored during login / CometD handshake
+  let storedMac = "";
+  if (env && env.RADIO_KV) {
+    try {
+      storedMac = (await env.RADIO_KV.get("device:last_mac")) || "";
+    } catch (_) { /* KV unavailable */ }
+  }
+
+  const playerCount = storedMac ? 1 : 0;
+
   return {
     version: CONFIG.serverVersion,
     server_name: CONFIG.serverName,
     uuid: "squeezecloud-v1",
-    player_count: 1,
+    // NOTE: key MUST use a space — SlimServer.lua reads data["player count"]
+    "player count": playerCount,
     info: "total_duration:0,total_genres:5,total_artists:0,total_albums:0,total_songs:0",
+    players_loop: storedMac ? [{
+      playerid: storedMac,
+      name: "Squeezebox Radio",
+      model: "squeezebox_radio",
+      connected: 1,
+      power: 1,
+    }] : [],
   };
 }
 
