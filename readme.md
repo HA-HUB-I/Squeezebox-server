@@ -47,10 +47,14 @@ bash deploy_lua_patch.sh 192.168.1.72 192.168.1.43
 ```
 
 Скриптът автоматично:
-1. Пренасочва `mysqueezebox.com`, `www.mysqueezebox.com` и `update.squeezenetwork.com`
-   към SqueezeCloud сървъра в `/mnt/storage/etc/hosts` на устройството.
+1. Инсталира patched `SqueezeboxBabyMeta.lua` — вика `jnt:setSNHostname(IP)` и пренасочва
+   TCP Slim Protocol (порт 3483) към нашия сървър **на Lua ниво** (заобикаля хардкодирания `www.squeezenetwork.com`).
 2. Инсталира patched `SetupWelcomeApplet.lua` (пропуска signup screen).
-3. Рестартира устройството.
+3. Инсталира patched `SlimDiscoveryApplet.lua` (UDP discovery порт).
+4. Добавя в `/mnt/storage/etc/hosts` на устройството:
+   `mysqueezebox.com`, `www.mysqueezebox.com`, `www.squeezenetwork.com`, `update.squeezenetwork.com`, `config.logitechmusic.com`
+   → така и DNS заявките от C слоя се пренасочват.
+5. Рестартира устройството.
 
 #### Ръчна промяна на hosts (алтернативно)
 ```bash
@@ -61,13 +65,18 @@ cat > /mnt/storage/etc/hosts << 'EOF'
 127.0.0.1 localhost
 192.168.1.43 mysqueezebox.com
 192.168.1.43 www.mysqueezebox.com
+192.168.1.43 www.squeezenetwork.com
 192.168.1.43 update.squeezenetwork.com
+192.168.1.43 config.logitechmusic.com
 EOF
 sync
 
 # Verify:
 cat /mnt/storage/etc/hosts
 ```
+
+> **Важно:** `www.squeezenetwork.com` е задължителен — firmware-ът го използва за
+> TCP Slim Protocol (порт 3483). Без него аудио командите не стигат до сървъра.
 
 ### 6. Restart Squeezebox
 Hold power button → reboot

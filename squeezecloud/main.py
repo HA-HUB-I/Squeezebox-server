@@ -8,8 +8,10 @@ import asyncio
 import json
 import logging
 import socket
+import struct
 import time
 import re
+import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional
@@ -46,6 +48,16 @@ _device_mac = "00:04:20:2c:90:b1"  # default, обновява се от HELO/Co
 # ── Now-playing state (обновява се от playlist play/stop команди) ─────────────
 # { "url": "...", "name": "..." }  или  {}  ако нищо не се пуска
 _now_playing: dict = {}
+
+# ── TCP Slim Protocol writer — set when device connects, cleared on disconnect ─
+_slim_writer: Optional[asyncio.StreamWriter] = None
+# ── Local software player subprocess (ffplay/mpv/vlc) when no Squeezebox ─────
+_local_player_proc: Optional[asyncio.subprocess.Process] = None
+# ── Local LAN IP — set once in main() ────────────────────────────────────────
+_local_ip: str = "127.0.0.1"
+# ── Comet status subscription channel — set when device subscribes for status ─
+# Stored globally so it can be found even when playlist play arrives with no clientId
+_status_channel: str = ""
 
 # ── Конфигурация ──────────────────────────────────────────────────────────────
 CONFIG = {
@@ -126,6 +138,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def detect_local_ip_middleware(request: Request, call_next):
+    """
+    Auto-detect the server's LAN IP from the Host header of every incoming
+    request. When the Squeezebox connects via http://192.168.1.X:9000/... the
+    Host header contains exactly that IP — far more reliable than trying to
+    guess the LAN interface at startup.
+    """
+    global _local_ip
+    host_header = request.headers.get("host", "").split(":")[0]
+    # Only accept dotted-decimal IPs, skip hostnames like 'mysqueezebox.com'
+    if host_header and host_header not in ("127.0.0.1", "localhost", ""):
+        parts = host_header.split(".")
+        if len(parts) == 4 and all(p.isdigit() for p in parts):
+            if _local_ip != host_header:
+                log.info("[config] Local IP detected from Host header: %s", host_header)
+                _local_ip = host_header
+    return await call_next(request)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # AUTH / LOGIN
@@ -240,31 +272,77 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SqueezeCloud — контрол</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body { font-family: sans-serif; margin: 0; background: #1a1a2e; color: #eee; }
-    header { background: #16213e; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-    header h1 { margin: 0; font-size: 1.4rem; color: #e94560; }
-    .badge { font-size: .75rem; background: #0f3460; padding: .2rem .6rem; border-radius: 999px; }
-    main { padding: 1.5rem 2rem; }
-    .card { background: #16213e; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.2rem; }
-    .card h2 { margin: 0 0 .6rem; font-size: 1rem; color: #e94560; text-transform: uppercase; letter-spacing: .05em; }
-    .info-row { display: flex; gap: 2rem; flex-wrap: wrap; }
-    .info-item label { display: block; font-size: .75rem; color: #aaa; }
-    .info-item span { font-size: 1rem; font-weight: bold; }
-    .genre-list { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
-    .genre-btn { background: #0f3460; border: none; color: #eee; padding: .35rem .9rem;
-                 border-radius: 999px; cursor: pointer; font-size: .85rem; }
+    header { background: #16213e; padding: .8rem 1.5rem; display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 1.3rem; color: #e94560; white-space: nowrap; }
+    .badge { font-size: .7rem; background: #0f3460; padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; }
+    .badge.green { background: #1a6b3a; color: #7dffaa; }
+    main { padding: 1rem 1.5rem; max-width: 900px; margin: 0 auto; }
+    .card { background: #16213e; border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+    .card h2 { margin: 0 0 .7rem; font-size: .85rem; color: #e94560; text-transform: uppercase; letter-spacing: .07em; }
+
+    /* ── Now-Playing ──────────────────────────────────────── */
+    #np-card { display: none; }
+    #np-card.active { display: block; }
+    .np-inner { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .np-icon { font-size: 2rem; flex-shrink: 0; animation: spin 3s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .np-icon.paused { animation-play-state: paused; }
+    .np-text { flex: 1 1 160px; }
+    .np-name { font-size: 1.05rem; font-weight: bold; color: #fff; }
+    .np-sub  { font-size: .75rem; color: #aaa; margin-top: .2rem; }
+    .np-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+    .ctrl-btn { background: #0f3460; border: none; color: #eee; width: 2.2rem; height: 2.2rem;
+                border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex;
+                align-items: center; justify-content: center; transition: background .15s; }
+    .ctrl-btn:hover { background: #e94560; }
+    .ctrl-btn.stop-btn { background: #6b1a1a; }
+    .ctrl-btn.stop-btn:hover { background: #e94560; }
+    .vol-row { display: flex; align-items: center; gap: .4rem; font-size: .75rem; color: #aaa; width: 100%; }
+    #vol-slider { flex: 1; accent-color: #e94560; cursor: pointer; }
+    #vol-label { min-width: 2.5rem; text-align: right; }
+
+    /* ── Genre filter ─────────────────────────────────────── */
+    .genre-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .genre-btn { background: #0f3460; border: none; color: #eee; padding: .28rem .75rem;
+                 border-radius: 999px; cursor: pointer; font-size: .8rem; transition: background .15s; }
     .genre-btn:hover, .genre-btn.active { background: #e94560; }
-    #stations { margin-top: 1rem; }
+
+    /* ── Search ───────────────────────────────────────────── */
+    #search-box { background: #0f3460; border: 1px solid #1e4080; border-radius: 6px;
+                  color: #eee; padding: .4rem .8rem; font-size: .85rem; width: 100%;
+                  margin-bottom: .8rem; outline: none; }
+    #search-box::placeholder { color: #667; }
+
+    /* ── Station list ─────────────────────────────────────── */
+    #stations { margin-top: .5rem; }
     .station-row { display: flex; justify-content: space-between; align-items: center;
-                   padding: .5rem 0; border-bottom: 1px solid #0f3460; }
+                   padding: .45rem 0; border-bottom: 1px solid #0f3460; gap: .5rem; }
     .station-row:last-child { border-bottom: none; }
-    .station-name { font-size: .95rem; }
-    .station-meta { font-size: .75rem; color: #aaa; }
-    .copy-btn { background: #e94560; border: none; color: #fff; padding: .3rem .8rem;
-                border-radius: 4px; cursor: pointer; font-size: .8rem; }
-    .copy-btn:hover { background: #c73652; }
-    #msg { position: fixed; bottom: 1rem; right: 1rem; background: #e94560; color: #fff;
-           padding: .6rem 1.2rem; border-radius: 6px; display: none; font-size: .9rem; }
+    .station-row.playing { background: linear-gradient(90deg,rgba(233,69,96,.08),transparent); border-radius: 4px; padding-left: .4rem; }
+    .station-name { font-size: .9rem; font-weight: 500; }
+    .station-meta { font-size: .72rem; color: #aaa; }
+    .play-btn { background: #e94560; border: none; color: #fff; padding: .28rem .75rem;
+                border-radius: 4px; cursor: pointer; font-size: .8rem; white-space: nowrap;
+                flex-shrink: 0; transition: background .15s; }
+    .play-btn:hover { background: #c73652; }
+    .play-btn.active { background: #1a6b3a; }
+    .play-btn.active:hover { background: #e94560; }
+
+    #load-more { display: block; width: 100%; margin-top: .8rem; background: #0f3460; border: none;
+                 color: #eee; padding: .5rem; border-radius: 6px; cursor: pointer; font-size: .85rem; }
+    #load-more:hover { background: #1e4080; }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    #toast { position: fixed; bottom: 1.2rem; right: 1.2rem; background: #e94560; color: #fff;
+             padding: .55rem 1rem; border-radius: 6px; display: none; font-size: .85rem;
+             max-width: 280px; word-break: break-word; z-index: 999; }
+
+    /* ── Info row ─────────────────────────────────────────── */
+    .info-row { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .info-item label { display: block; font-size: .72rem; color: #aaa; }
+    .info-item span  { font-size: .9rem; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -272,62 +350,121 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
   <h1>&#127925; SqueezeCloud</h1>
   <span class="badge" id="srv-version">v…</span>
   <span class="badge" id="device-mac">устройство: …</span>
+  <span class="badge green" id="np-badge" style="display:none">&#9654; Играе</span>
 </header>
 <main>
+
+  <!-- Now Playing -->
+  <div class="card" id="np-card">
+    <h2>&#9654; Сега играе</h2>
+    <div class="np-inner">
+      <div class="np-icon" id="np-icon">&#127925;</div>
+      <div class="np-text">
+        <div class="np-name" id="np-name">—</div>
+        <div class="np-sub"  id="np-url">—</div>
+      </div>
+      <div class="np-controls">
+        <button class="ctrl-btn" id="btn-pause" title="Пауза / Продължи" onclick="togglePause()">&#9646;&#9646;</button>
+        <button class="ctrl-btn stop-btn" title="Стоп" onclick="stopPlayback()">&#9632;</button>
+        <div class="vol-row">
+          <span>&#128266;</span>
+          <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVolume(this.value)">
+          <span id="vol-label">80%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Server status -->
   <div class="card">
     <h2>Статус на сървъра</h2>
     <div class="info-row">
       <div class="info-item"><label>Сървър</label><span id="srv-name">…</span></div>
       <div class="info-item"><label>Версия</label><span id="srv-ver">…</span></div>
-      <div class="info-item"><label>Свързано устройство (MAC)</label><span id="dev-mac">…</span></div>
+      <div class="info-item"><label>MAC на устройство</label><span id="dev-mac">…</span></div>
     </div>
   </div>
-  <div class="card">
-    <h2>Радио по жанр</h2>
-    <div class="genre-list" id="genre-list">Зареждане…</div>
-    <div id="stations"></div>
-  </div>
-</main>
-<div id="msg"></div>
-<script>
-  let allStations = [];
 
+  <!-- Radio stations -->
+  <div class="card">
+    <h2>Радио станции</h2>
+    <div class="genre-list" id="genre-list">Зареждане…</div>
+    <br>
+    <input type="search" id="search-box" placeholder="&#128269; Търси станция…" oninput="onSearch(this.value)">
+    <div id="stations"></div>
+    <button id="load-more" onclick="loadMore()" style="display:none">Покажи още</button>
+  </div>
+
+</main>
+<div id="toast"></div>
+
+<!-- Hidden HTML5 audio element used for browser-side playback -->
+<audio id="audio-player" preload="none"></audio>
+
+<script>
+  const audio = document.getElementById('audio-player');
+  let allStations = [];
+  let filteredStations = [];
+  let shownCount = 30;
+  let currentUrl = '';
+  let currentName = '';
+
+  // ── Init ────────────────────────────────────────────────────────────────────
   async function init() {
-    // Server status
     try {
       const r = await fetch('/api/v1/status');
       const d = await r.json();
-      document.getElementById('srv-name').textContent = d.result.server_name;
-      document.getElementById('srv-ver').textContent = d.result.version;
+      document.getElementById('srv-name').textContent    = d.result.server_name;
+      document.getElementById('srv-ver').textContent     = d.result.version;
       document.getElementById('srv-version').textContent = 'v' + d.result.version;
-    } catch (e) { console.error('status error', e); }
+    } catch(e) {}
 
-    // Device MAC (best-effort)
     try {
       const r = await fetch('/api/v1/session');
       const d = await r.json();
-      const mac = (d.result && d.result.playerid) || '\u2014';
-      document.getElementById('dev-mac').textContent = mac;
+      const mac = (d.result && d.result.playerid) || '—';
+      document.getElementById('dev-mac').textContent     = mac;
       document.getElementById('device-mac').textContent = 'MAC: ' + mac;
-    } catch (_) {}
+    } catch(_) {}
 
-    // Radio stations
     try {
       const r = await fetch('/api/v1/radios');
       const d = await r.json();
       allStations = d.stations || [];
+      filteredStations = allStations;
       renderGenres(d.genres || []);
-      renderStations(allStations.slice(0, 20));
-    } catch (e) { console.error('radios error', e); }
+      renderStations(filteredStations.slice(0, shownCount));
+      const more = document.getElementById('load-more');
+      more.style.display = filteredStations.length > shownCount ? 'block' : 'none';
+    } catch(e) { console.error('radios error', e); }
+
+    // Restore any in-progress playback
+    try {
+      const r = await fetch('/api/v1/now_playing');
+      const d = await r.json();
+      if (d.mode === 'play' && d.url) {
+        currentUrl  = d.url;
+        currentName = d.name || d.url;
+        startAudio(d.url, d.name, false);
+      }
+    } catch(_) {}
   }
 
+  // ── Genre filter ────────────────────────────────────────────────────────────
   function renderGenres(genres) {
     const el = document.getElementById('genre-list');
     el.innerHTML = '';
     const all = document.createElement('button');
     all.className = 'genre-btn active';
     all.textContent = 'Всички';
-    all.addEventListener('click', () => { setActive(all); renderStations(allStations.slice(0, 50)); });
+    all.addEventListener('click', () => {
+      setActive(all);
+      filteredStations = allStations;
+      shownCount = 30;
+      renderStations(filteredStations.slice(0, shownCount));
+      document.getElementById('load-more').style.display =
+        filteredStations.length > shownCount ? 'block' : 'none';
+    });
     el.appendChild(all);
     genres.forEach(g => {
       const btn = document.createElement('button');
@@ -335,7 +472,11 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
       btn.textContent = g;
       btn.addEventListener('click', () => {
         setActive(btn);
-        renderStations(allStations.filter(s => (s.genre || '').toLowerCase() === g.toLowerCase()));
+        filteredStations = allStations.filter(s => (s.genre||'').toLowerCase() === g.toLowerCase());
+        shownCount = 30;
+        renderStations(filteredStations.slice(0, shownCount));
+        document.getElementById('load-more').style.display =
+          filteredStations.length > shownCount ? 'block' : 'none';
       });
       el.appendChild(btn);
     });
@@ -346,7 +487,27 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     btn.classList.add('active');
   }
 
-  // Render station rows using DOM creation — no innerHTML with user data, no XSS.
+  // ── Search ──────────────────────────────────────────────────────────────────
+  function onSearch(q) {
+    const lq = q.toLowerCase();
+    filteredStations = lq
+      ? allStations.filter(s => s.name.toLowerCase().includes(lq))
+      : allStations;
+    shownCount = 30;
+    renderStations(filteredStations.slice(0, shownCount));
+    document.getElementById('load-more').style.display =
+      filteredStations.length > shownCount ? 'block' : 'none';
+  }
+
+  // ── Load more ───────────────────────────────────────────────────────────────
+  function loadMore() {
+    shownCount += 30;
+    renderStations(filteredStations.slice(0, shownCount));
+    document.getElementById('load-more').style.display =
+      filteredStations.length > shownCount ? 'block' : 'none';
+  }
+
+  // ── Render stations ─────────────────────────────────────────────────────────
   function renderStations(stations) {
     const el = document.getElementById('stations');
     el.innerHTML = '';
@@ -359,7 +520,8 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     }
     stations.forEach(s => {
       const row = document.createElement('div');
-      row.className = 'station-row';
+      row.className = 'station-row' + (s.url === currentUrl ? ' playing' : '');
+      row.dataset.url = s.url;
 
       const info = document.createElement('div');
       const nameEl = document.createElement('div');
@@ -367,14 +529,21 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
       nameEl.textContent = s.name || '';
       const metaEl = document.createElement('div');
       metaEl.className = 'station-meta';
-      metaEl.textContent = (s.genre || '') + ' \u2022 ' + (s.country || '') + ' \u2022 ' + (s.bitrate || '?') + ' kbps';
+      metaEl.textContent = [s.genre, s.country, s.bitrate ? s.bitrate + ' kbps' : '']
+        .filter(Boolean).join(' • ');
       info.appendChild(nameEl);
       info.appendChild(metaEl);
 
       const btn = document.createElement('button');
-      btn.className = 'copy-btn';
-      btn.textContent = '\\u25b6 URL';
-      btn.addEventListener('click', () => copyUrl(s.url || '', s.name || ''));
+      btn.className = 'play-btn' + (s.url === currentUrl ? ' active' : '');
+      btn.textContent = s.url === currentUrl ? '■ Стоп' : '▶ Пусни';
+      btn.addEventListener('click', () => {
+        if (s.url === currentUrl) {
+          stopPlayback();
+        } else {
+          playStation(s.url, s.name);
+        }
+      });
 
       row.appendChild(info);
       row.appendChild(btn);
@@ -382,16 +551,103 @@ _WEBCONTROL_HTML = """<!DOCTYPE html>
     });
   }
 
-  function copyUrl(url, name) {
-    navigator.clipboard.writeText(url).then(() => showMsg('Копирано: ' + name)).catch(() => showMsg(url));
+  // ── Playback ────────────────────────────────────────────────────────────────
+  async function playStation(url, name) {
+    // Tell server (for status tracking & physical Squeezebox / local player)
+    try {
+      await fetch('/api/v1/play', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url, name}),
+      });
+    } catch(_) {}
+
+    currentUrl  = url;
+    currentName = name || url;
+    startAudio(url, name, true);
   }
 
-  function showMsg(text) {
-    const el = document.getElementById('msg');
+  function startAudio(url, name, notify) {
+    // Use the stream proxy so the browser avoids direct HTTPS/CORS issues
+    const proxyUrl = '/stream?url=' + encodeURIComponent(url);
+    audio.src = proxyUrl;
+    audio.volume = document.getElementById('vol-slider').value / 100;
+    audio.play().catch(e => {
+      // Autoplay blocked — show message, user must click again
+      showToast('Натиснете ▶ Пусни за да стартирате аудиото');
+    });
+    updateNowPlaying(name || url, url, false);
+    if (notify) showToast('▶ ' + (name || url));
+    refreshRows();
+  }
+
+  function updateNowPlaying(name, url, paused) {
+    const card = document.getElementById('np-card');
+    card.classList.add('active');
+    document.getElementById('np-name').textContent = name;
+    document.getElementById('np-url').textContent  = url;
+    document.getElementById('np-icon').classList.toggle('paused', paused);
+    document.getElementById('np-badge').style.display = 'inline';
+    document.getElementById('btn-pause').textContent  = paused ? '▶' : '⏸';
+  }
+
+  function togglePause() {
+    if (audio.paused) {
+      audio.play();
+      updateNowPlaying(currentName, currentUrl, false);
+    } else {
+      audio.pause();
+      updateNowPlaying(currentName, currentUrl, true);
+    }
+  }
+
+  async function stopPlayback() {
+    audio.pause();
+    audio.src = '';
+    currentUrl = '';
+    currentName = '';
+    document.getElementById('np-card').classList.remove('active');
+    document.getElementById('np-badge').style.display = 'none';
+    try { await fetch('/api/v1/stop', {method: 'POST'}); } catch(_) {}
+    refreshRows();
+    showToast('■ Стоп');
+  }
+
+  function setVolume(v) {
+    audio.volume = v / 100;
+    document.getElementById('vol-label').textContent = v + '%';
+  }
+
+  function refreshRows() {
+    document.querySelectorAll('.station-row').forEach(row => {
+      const url = row.dataset.url;
+      const btn = row.querySelector('.play-btn');
+      if (!btn) return;
+      if (url === currentUrl) {
+        row.classList.add('playing');
+        btn.classList.add('active');
+        btn.textContent = '■ Стоп';
+      } else {
+        row.classList.remove('playing');
+        btn.classList.remove('active');
+        btn.textContent = '▶ Пусни';
+      }
+    });
+  }
+
+  // ── Toast ────────────────────────────────────────────────────────────────────
+  function showToast(text) {
+    const el = document.getElementById('toast');
     el.textContent = text;
     el.style.display = 'block';
-    setTimeout(() => { el.style.display = 'none'; }, 3000);
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 3000);
   }
+
+  // Audio events
+  audio.addEventListener('error', () => {
+    showToast('⚠ Грешка при зареждане на потока');
+  });
 
   init();
 </script>
@@ -465,8 +721,11 @@ async def cometd(request: Request):
         channel = msg.get("channel", "")
         resp = await _handle_comet_message(msg, channel)
         if resp:
-            responses.append(resp)
-            log.debug("[Comet] → %s | resp=%s", channel, json.dumps(resp)[:200])
+            if isinstance(resp, list):
+                responses.extend(resp)
+            else:
+                responses.append(resp)
+            log.debug("[Comet] → %s", channel)
 
     if is_connect:
         client_id = next(
@@ -508,6 +767,7 @@ async def cometd_get(request: Request):
 
 
 async def _handle_comet_message(msg: dict, channel: str) -> dict:
+    global _device_mac, _status_channel
     # ── /meta/handshake ──────────────────────────────────────────────────────
     if channel == "/meta/handshake":
         client_id = _new_client_id()
@@ -515,7 +775,6 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
         # Извлечи MAC от ext ако е наличен
         ext = msg.get("ext", {})
         if ext.get("mac"):
-            global _device_mac
             _device_mac = ext["mac"]
             log.info("[Comet] MAC от handshake: %s", _device_mac)
         return {
@@ -604,13 +863,35 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
 
         result = await dispatch_rpc(command, cmd, player_mac)
 
-        return {
+        msgs = [{
             "channel": response_channel,
             "clientId": client_id,
             "successful": True,
             "data": result,
             "id": msg.get("id", ""),
-        }
+        }]
+
+        # After playlist play/stop push updated status to the NowPlaying subscription
+        if command == "playlist" and len(cmd) > 1 and str(cmd[1]).lower() in ("play", "stop", "clear", "pause"):
+            # Look up by session first, then fall back to the global status channel.
+            # The global fallback handles the case where clientId is empty in the play request.
+            status_channel = (
+                _comet_sessions.get(client_id, {}).get("status_channel")
+                or _status_channel
+            )
+            if status_channel:
+                mac = player_mac or _device_mac
+                status_data = await dispatch_rpc("status", ["status"], mac)
+                msgs.append({
+                    "channel": status_channel,
+                    "id": f"push-{msg.get('id', '')}",
+                    "data": status_data,
+                })
+                log.info("[Comet] → status push → %s (mode=%s)", status_channel, status_data.get("mode"))
+            else:
+                log.warning("[Comet] status_channel not known yet — NowPlaying will not update")
+
+        return msgs
 
     # ── /slim/subscribe — subscription за player events ──────────────────────
     elif channel == "/slim/subscribe":
@@ -660,6 +941,13 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
             }
         else:
             result = await dispatch_rpc(command, cmd, player_mac)
+
+        # Store the status subscription channel so we can push updates after play commands
+        if command == "status":
+            _status_channel = response_channel
+            if client_id in _comet_sessions:
+                _comet_sessions[client_id]["status_channel"] = response_channel
+            log.info("[Comet] status_channel saved: %s", response_channel)
 
         return {
             "channel": response_channel,
@@ -815,6 +1103,45 @@ async def delete_custom_station(idx: int):
     return {"status": "ok", "removed": removed, "total": len(CUSTOM_STATIONS)}
 
 
+@app.get("/stream")
+async def stream_proxy(url: str):
+    """
+    HTTP audio stream proxy for Squeezebox playback.
+    The strm-start command points the device here so we can handle HTTPS,
+    redirects and other protocol details on the server side.
+    The device connects via plain HTTP; we fetch the real stream behind it.
+    """
+    parsed_url = urllib.parse.urlparse(url)
+    if parsed_url.scheme not in ("http", "https"):
+        return JSONResponse({"error": "only http/https streams allowed"}, status_code=400)
+
+    log.info("[stream-proxy] → %s", url[:100])
+
+    async def generate():
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(connect=15.0, read=None, write=None, pool=None),
+                follow_redirects=True,
+            ) as client:
+                async with client.stream("GET", url, headers={
+                    "User-Agent": "Squeezebox/7.7.3",
+                    "Accept": "*/*",
+                    # Do NOT request Icy-MetaData — keeps the byte stream clean
+                    # (the Squeezebox expects icy-metaint header if metadata is embedded)
+                }) as resp:
+                    async for chunk in resp.aiter_bytes(8192):
+                        yield chunk
+        except Exception as e:
+            log.warning("[stream-proxy] Stream error: %s", e)
+
+    from starlette.responses import StreamingResponse as _SR
+    return _SR(
+        generate(),
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "no-cache", "Accept-Ranges": "none"},
+    )
+
+
 @app.api_route("/{path:path}", methods=["GET", "POST"])
 async def catch_all(request: Request, path: str):
     """Логва всички непознати endpoints"""
@@ -894,6 +1221,7 @@ def _home_menu_items() -> list:
 
 
 async def dispatch_rpc(command: str, cmd: list, player_mac: str):
+    global _now_playing
     if command == "serverstatus":
         mac = _device_mac
         log.debug("[serverstatus] via dispatch, mac=%s", mac)
@@ -937,14 +1265,19 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
         mac = player_mac or _device_mac
         if _now_playing:
             mode = "play"
+            track_name = _now_playing.get("name", "")
+            track_url  = _now_playing.get("url", "")
             playlist_loop = [{
                 "id": "current",
-                "title": _now_playing.get("name", ""),
-                "url": _now_playing.get("url", ""),
+                "title": track_name,
+                # current_title is the field Jive reads for remote/radio streams
+                "current_title": track_name,
+                "url": track_url,
                 "duration": 0,
                 "remote": 1,
+                "remote_title": track_name,
             }]
-            remote_meta = {"title": _now_playing.get("name", ""), "url": _now_playing.get("url", "")}
+            remote_meta = {"title": track_name, "url": track_url}
         else:
             mode = "stop"
             playlist_loop = []
@@ -955,23 +1288,30 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
             "mode": mode,
             "mixer_volume": 50,
             "playlist_cur_index": 0,
-        "playlist_timestamp": _now_playing.get("started_at", time.time()),
+            "playlist_tracks": len(playlist_loop),
+            "playlist_timestamp": _now_playing.get("started_at", time.time()),
             "playlist_loop": playlist_loop,
             "remoteMeta": remote_meta,
         }
 
     elif command == "playlist":
         # cmd = ["playlist", "play"|"stop"|"clear", url, name]
-        global _now_playing
         sub = str(cmd[1]).lower() if len(cmd) > 1 else ""
         if sub == "play" and len(cmd) > 2:
-            url  = cmd[2]
+            original_url = cmd[2]
             name = cmd[3] if len(cmd) > 3 else ""
-            _now_playing = {"url": url, "name": name, "started_at": time.time()}
-            log.info("[playlist] Играе: %s  (%s)", name, url)
+            # Proxy HTTPS streams through our local HTTP server.
+            # The Squeezebox Radio firmware (7.7.x) does not support TLS natively,
+            # so HTTPS URLs must be transparently proxied as plain HTTP.
+            _now_playing = {"url": original_url, "name": name, "started_at": time.time()}
+            log.info("[playlist] Играе: %s  (%s)", name, original_url)
+            # _send_strm_play always routes via our /stream proxy so the device
+            # only ever connects to our server for audio (handles HTTPS + redirects)
+            asyncio.create_task(_send_strm_play(original_url, name))
         elif sub in ("stop", "clear", "pause"):
             _now_playing = {}
             log.info("[playlist] Спряно")
+            asyncio.create_task(_send_strm_stop())
         return {"ok": 1, "mode": "play" if _now_playing else "stop"}
 
     elif command in ("radios", "radio"):
@@ -992,6 +1332,7 @@ async def dispatch_rpc(command: str, cmd: list, player_mac: str):
                 if (s.get("genre") or "Music").lower() == genre.lower()
             ]
             slice_ = filtered[start:start + count]
+
             return {
                 "count": len(filtered),
                 "offset": start,
@@ -1271,7 +1612,7 @@ async def get_radio_stations() -> list:
             resp = await client.get(
                 f"{apis[0]}/json/stations/search",
                 params={"limit": 300, "hidebroken": "true", "order": "votes",
-                        "reverse": "true", "is_https": "true"},
+                        "reverse": "true"},
                 headers={"User-Agent": "SqueezeCloud/1.0"},
             )
             if resp.status_code == 200:
@@ -1491,10 +1832,121 @@ def _clean(text: str) -> str:
 # Имплементираме минимален handshake — достатъчен за discovery
 # ═════════════════════════════════════════════════════════════════════════════
 
+
+# ── Slim Protocol strm helpers ────────────────────────────────────────────────
+
+async def _send_strm_play(url: str, name: str):
+    """Send strm start to connected Squeezebox, or start local software player."""
+    global _slim_writer, _local_ip
+
+    if _slim_writer:
+        # ── Physical Squeezebox connected — send strm TCP command ─────────────
+        server_ip = _local_ip if _local_ip not in ("127.0.0.1", "") else get_local_ip()
+        proxy_path = f"/stream?url={urllib.parse.quote(url, safe='')}"
+        http_req = (
+            f"GET {proxy_path} HTTP/1.0\r\n"
+            f"Host: {server_ip}:9000\r\n"
+            f"Accept: */*\r\n"
+            f"User-Agent: Squeezebox/7.7.3\r\n"
+            f"\r\n"
+        ).encode("utf-8")
+        ip_bytes = bytes(int(p) for p in server_ip.split("."))
+        port_bytes = struct.pack("!H", 9000)
+        try:
+            _slim_send(_slim_writer, b"strm", b"q" + b"\x00" * 24)
+            await _slim_writer.drain()
+            await asyncio.sleep(0.05)
+            strm_start = bytes([
+                ord('s'), ord('1'), ord('m'),
+                ord('?'), ord('?'), ord('?'), ord('?'),
+                255, 0, 0, ord('0'), 0, 0, 0,
+                0, 0, 0, 0,
+            ]) + port_bytes + ip_bytes + http_req
+            _slim_send(_slim_writer, b"strm", strm_start)
+            await _slim_writer.drain()
+            log.info("[strm] ✓ strm start → %s  (%s)", name, url[:80])
+        except Exception as e:
+            log.error("[strm] Грешка при изпращане на strm start: %s", e)
+    else:
+        # ── No physical device — use local software player ────────────────────
+        log.info("[player] Няма Squeezebox — пускам локално: %s", name)
+        await _start_local_player(url, name)
+
+
+async def _start_local_player(url: str, name: str):
+    """Start a local subprocess player (ffplay / mpv / vlc) for the given stream URL."""
+    global _local_player_proc, _local_ip
+    await _stop_local_player()
+
+    server_ip = _local_ip if _local_ip not in ("127.0.0.1", "") else get_local_ip()
+    proxy_url = f"http://{server_ip}:9000/stream?url={urllib.parse.quote(url, safe='')}"
+
+    # Candidate players in preference order
+    candidates = [
+        ["ffplay", "-nodisp", "-loglevel", "quiet", "-i", proxy_url],
+        ["ffplay", "-nodisp", "-loglevel", "quiet", proxy_url],
+        ["mpv", "--no-video", "--really-quiet", proxy_url],
+        ["vlc", "--intf", "dummy", "--quiet", proxy_url],
+    ]
+    for cmd in candidates:
+        try:
+            _local_player_proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            log.info("[player] ✓ %s стартиран: %s", cmd[0], name)
+            return
+        except FileNotFoundError:
+            continue
+        except Exception as e:
+            log.warning("[player] %s грешка: %s", cmd[0], e)
+
+    log.warning(
+        "[player] Не е намерен локален плейър (ffplay/mpv/vlc). "
+        "Инсталирайте ffmpeg за автоматично възпроизвеждане на сървъра. "
+        "Можете да слушате от уеб интерфейса на http://%s:9000/webcontrol",
+        server_ip,
+    )
+
+
+async def _stop_local_player():
+    """Terminate any running local player subprocess."""
+    global _local_player_proc
+    if _local_player_proc:
+        try:
+            _local_player_proc.terminate()
+            await asyncio.wait_for(_local_player_proc.wait(), timeout=3.0)
+        except Exception:
+            try:
+                _local_player_proc.kill()
+            except Exception:
+                pass
+        _local_player_proc = None
+        log.info("[player] Локалният плейър спрян")
+
+
+async def _send_strm_stop():
+    """Stop playback — Squeezebox strm q or local player subprocess."""
+    global _slim_writer
+    if _slim_writer:
+        try:
+            _slim_send(_slim_writer, b"strm", b"q" + b"\x00" * 24)
+            await _slim_writer.drain()
+            log.info("[strm] ✓ strm stop")
+        except Exception as e:
+            log.error("[strm] Грешка при изпращане на strm stop: %s", e)
+    await _stop_local_player()
+
+
 async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     addr = writer.get_extra_info("peername")
     log.info("[Slim] Свързан: %s", addr)
     keepalive_task = None
+
+    global _slim_writer, _device_mac
+    _slim_writer = writer
+    log.debug("[Slim] _slim_writer обновен за %s", addr)
 
     async def send_keepalive():
         try:
@@ -1561,6 +2013,8 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
     finally:
         if keepalive_task:
             keepalive_task.cancel()
+        if _slim_writer is writer:
+            _slim_writer = None
         try:
             writer.close()
         except Exception:
@@ -1580,7 +2034,12 @@ def _slim_send(writer: asyncio.StreamWriter, cmd: bytes, data: bytes):
 
 
 async def start_slim_server():
-    server = await asyncio.start_server(slim_handle_client, "0.0.0.0", 3483)
+    try:
+        server = await asyncio.start_server(slim_handle_client, "0.0.0.0", 3483)
+    except OSError as e:
+        log.critical("[Slim] НЕ МОЖЕ да стартира TCP 3483: %s  "
+                     "(Проверете дали портът не е зает с: netstat -an | grep 3483)", e)
+        return
     log.info("[Slim] TCP 3483 слуша...")
     async with server:
         await server.serve_forever()
@@ -1595,9 +2054,16 @@ async def start_slim_server():
 async def slim_udp_discovery(local_ip: str):
     """
     Squeezebox изпраща UDP broadcast към 255.255.255.255:3483
-    с payload 'eIPAD\x00NAME\x00' търсейки LMS сървър.
-    Отговаряме с 'E' + server_name + '\x00' + ip + '\x00' + port + '\x00'
+    с payload 'eIPAD\x00NAME\x00JSON\x00VERS\x00UUID\x00JVID\x06...'
+    търсейки LMS сървър.
+
+    Отговаряме с 'E' + TLV пакети:
+    всеки TLV = 4-байтов таг + 1-байт дължина + стойност
+    Таговете: NAME, IPAD, JSON (HTTP порт), VERS, UUID
     """
+    def _tlv(tag: str, val: bytes) -> bytes:
+        return tag.encode("ascii") + bytes([len(val)]) + val
+
     loop = asyncio.get_event_loop()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1608,12 +2074,6 @@ async def slim_udp_discovery(local_ip: str):
 
     log.info("[Discovery] UDP 3483 слуша за broadcasts...")
 
-    name = CONFIG["server_name"].encode("utf-8")
-    ip   = local_ip.encode("utf-8")
-    port = b"9000"
-    # Стандартен LMS discovery отговор
-    response = b"E" + name + b"\x00" + ip + b"\x00" + port + b"\x00"
-
     while True:
         try:
             data, addr = await loop.run_in_executor(None, sock.recvfrom, 1024)
@@ -1621,8 +2081,19 @@ async def slim_udp_discovery(local_ip: str):
 
             # Squeezebox изпраща 'e' за discovery request
             if data and data[0:1] in (b"e", b"E", b"d"):
+                # Използваме актуалното _local_ip (обновено от HTTP middleware)
+                reply_ip = _local_ip if _local_ip not in ("127.0.0.1", "") else local_ip
+                response = (
+                    b"E"
+                    + _tlv("NAME", CONFIG["server_name"].encode("utf-8"))
+                    + _tlv("IPAD", reply_ip.encode("ascii"))
+                    + _tlv("JSON", b"9000")
+                    + _tlv("VERS", CONFIG["version"].encode("utf-8"))
+                    + _tlv("UUID", CONFIG["server_name"].encode("utf-8"))
+                )
                 sock.sendto(response, addr)
-                log.debug("[Discovery] ✓ Отговорено на %s → %s @ %s:9000", addr[0], CONFIG['server_name'], local_ip)
+                log.debug("[Discovery] ✓ TLV отговор → %s: NAME=%s IPAD=%s JSON=9000",
+                          addr[0], CONFIG["server_name"], reply_ip)
 
         except BlockingIOError:
             await asyncio.sleep(0.05)
@@ -1651,6 +2122,10 @@ async def main():
 
     local_ip = get_local_ip()
 
+    # Make local IP available to strm helpers
+    global _local_ip
+    _local_ip = local_ip
+
     print("=" * 60)
     print("  SqueezeCloud сървър")
     print("=" * 60)
@@ -1661,16 +2136,20 @@ async def main():
     print()
     print("  Squeezebox ще се открие АВТОМАТИЧНО чрез broadcast!")
     print()
-    print("  Ако не се открие — добави в SSH на Squeezebox:")
+    print("  Задължително добави в SSH на Squeezebox:")
     print(f"  cat > /mnt/storage/etc/hosts << 'EOF'")
     print(f"  127.0.0.1 localhost")
     print(f"  {local_ip} mysqueezebox.com")
     print(f"  {local_ip} www.mysqueezebox.com")
+    print(f"  {local_ip} www.squeezenetwork.com")
     print(f"  {local_ip} update.squeezenetwork.com")
     print(f"  {local_ip} config.logitechmusic.com")
     print(f"  EOF")
     print()
-    print("  После: reboot")
+    print("  След промяна на hosts: reboot")
+    print()
+    print("  ВАЖНО: www.squeezenetwork.com е нужен за TCP Slim Protocol (порт 3483)!")
+    print("  Без него устройството не изпраща аудио команди към сървъра.")
     print("=" * 60)
 
     # Стартираме всичките три услуги паралелно
