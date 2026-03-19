@@ -25,6 +25,8 @@ const CONFIG = {
   defaultLat: 42.6977,
   defaultLon: 23.3219,
   defaultCity: "Sofia",
+  // Olson timezone returned by GET /public/tz (used by SetupTZMeta.lua)
+  defaultTimezone: "Europe/Sofia",
   // How long to keep "now playing" state in KV (seconds)
   nowPlayingTtl: 3600,
 };
@@ -98,6 +100,12 @@ export default {
         response = handleLogin(url, request);
       } else if (path === "/api/v1/time") {
         response = handleTime();
+      } else if (path === "/public/tz") {
+        // Squeezebox firmware calls GET /public/tz on connect to guess the timezone
+        response = handlePublicTz();
+      } else if (path === "/cometd") {
+        // Bayeux/Comet long-poll endpoint — device uses this for server push notifications
+        response = await handleComet(request, env);
       } else if (path === "/jsonrpc.js") {
         response = await handleJsonRpc(request, env);
       } else if (path === "/api/v1/radios" || path === "/radio" || path.startsWith("/api/v1/radio")) {
@@ -163,6 +171,16 @@ function handleTime() {
     status: "ok",
     time: Math.floor(Date.now() / 1000),
     result: Math.floor(Date.now() / 1000),
+  });
+}
+
+// ─── TIMEZONE GUESS ───────────────────────────────────────────────────────────
+// SetupTZMeta.lua calls GET /public/tz on server connect to auto-set the
+// device timezone.  The response must be a plain-text Olson timezone string.
+
+function handlePublicTz() {
+  return new Response(CONFIG.defaultTimezone, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }
 
