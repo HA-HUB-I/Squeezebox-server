@@ -9,6 +9,8 @@ import json
 import logging
 import socket
 import struct
+import sys
+import threading
 import time
 import re
 import urllib.parse
@@ -51,8 +53,11 @@ _now_playing: dict = {}
 
 # ── TCP Slim Protocol writer — set when device connects, cleared on disconnect ─
 _slim_writer: Optional[asyncio.StreamWriter] = None
-# ── Local software player subprocess (ffplay/mpv/vlc) when no Squeezebox ─────
+# ── Local software player subprocess (ffplay/mpv/vlc/powershell) ──────────────
 _local_player_proc: Optional[asyncio.subprocess.Process] = None
+# ── Pure-Python audio player (sounddevice + miniaudio) ───────────────────────
+_python_audio_stop: Optional[threading.Event] = None
+_python_audio_thread: Optional[threading.Thread] = None
 # ── Local LAN IP — set once in main() ────────────────────────────────────────
 _local_ip: str = "127.0.0.1"
 # ── Comet status subscription channel — set when device subscribes for status ─
@@ -1874,45 +1879,122 @@ async def _send_strm_play(url: str, name: str):
 
 
 async def _start_local_player(url: str, name: str):
-    """Start a local subprocess player (ffplay / mpv / vlc) for the given stream URL."""
+    """Start a local player: tries ffplay/mpv/vlc, then Windows PowerShell WMP,
+    then pure-Python sounddevice+miniaudio, in that order."""
     global _local_player_proc, _local_ip
     await _stop_local_player()
 
     server_ip = _local_ip if _local_ip not in ("127.0.0.1", "") else get_local_ip()
     proxy_url = f"http://{server_ip}:9000/stream?url={urllib.parse.quote(url, safe='')}"
 
-    # Candidate players in preference order
+    # ── 1. Subprocess candidates ──────────────────────────────────────────────
     candidates = [
         ["ffplay", "-nodisp", "-loglevel", "quiet", "-i", proxy_url],
         ["ffplay", "-nodisp", "-loglevel", "quiet", proxy_url],
-        ["mpv", "--no-video", "--really-quiet", proxy_url],
-        ["vlc", "--intf", "dummy", "--quiet", proxy_url],
+        ["mpv",    "--no-video", "--really-quiet", proxy_url],
+        ["vlc",    "--intf", "dummy", "--quiet", proxy_url],
     ]
+
+    # Windows-native: PowerShell + Windows Media Player COM (no install needed)
+    if sys.platform == "win32":
+        # WMPlayer.OCX.7 = Windows Media Player ActiveX — plays HTTP streams headlessly
+        ps_wmp = (
+            "$wmp = New-Object -ComObject 'WMPlayer.OCX.7'; "
+            "$wmp.settings.volume = 80; "
+            f"$wmp.URL = '{proxy_url}'; "
+            "$wmp.controls.play(); "
+            "Start-Sleep -Seconds 86400"
+        )
+        candidates.append([
+            "powershell", "-WindowStyle", "Hidden", "-NonInteractive",
+            "-Command", ps_wmp,
+        ])
+
     for cmd in candidates:
         try:
-            _local_player_proc = await asyncio.create_subprocess_exec(
+            proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            log.info("[player] ✓ %s стартиран: %s", cmd[0], name)
-            return
+            # Short wait to detect immediate crash
+            await asyncio.sleep(0.5)
+            if proc.returncode is None:  # still running → success
+                _local_player_proc = proc
+                log.info("[player] ✓ %s стартиран: %s", cmd[0], name)
+                return
         except FileNotFoundError:
             continue
         except Exception as e:
             log.warning("[player] %s грешка: %s", cmd[0], e)
 
+    # ── 2. Pure-Python fallback: sounddevice + miniaudio ─────────────────────
+    if await _start_python_audio(proxy_url, name):
+        return
+
+    # ── 3. Nothing worked ─────────────────────────────────────────────────────
     log.warning(
-        "[player] Не е намерен локален плейър (ffplay/mpv/vlc). "
-        "Инсталирайте ffmpeg за автоматично възпроизвеждане на сървъра. "
-        "Можете да слушате от уеб интерфейса на http://%s:9000/webcontrol",
+        "[player] Не е намерен локален плейър. "
+        "Инсталирайте ffmpeg (winget install Gyan.FFmpeg) "
+        "ИЛИ изпълнете: pip install sounddevice miniaudio  "
+        "ИЛИ слушайте директно в браузъра: http://%s:9000/webcontrol",
         server_ip,
     )
 
 
+async def _start_python_audio(url: str, name: str) -> bool:
+    """Windows-native audio via ctypes winmm MCI (always available on Windows).
+    Returns True if playback started successfully."""
+    global _python_audio_stop, _python_audio_thread
+
+    if sys.platform != "win32":
+        return False
+
+    stop_event = threading.Event()
+
+    def _mci_play():
+        try:
+            import ctypes
+            winmm = ctypes.windll.winmm
+
+            # Close any leftover session from a previous play
+            winmm.mciSendStringW("close radio", None, 0, None)
+
+            # Open the HTTP stream via the Windows Media Player MCI device
+            open_cmd = f'open "{url}" type mpegvideo alias radio'
+            rc = winmm.mciSendStringW(open_cmd, None, 0, None)
+            if rc != 0:
+                log.warning("[player] MCI open failed (rc=%d) — перепробвайте с ffmpeg или web UI", rc)
+                return
+
+            winmm.mciSendStringW("play radio", None, 0, None)
+            log.info("[player] ✓ Windows MCI стартира: %s", name)
+
+            while not stop_event.is_set():
+                time.sleep(1)
+
+            winmm.mciSendStringW("stop radio",  None, 0, None)
+            winmm.mciSendStringW("close radio", None, 0, None)
+        except Exception as e:
+            log.warning("[player] MCI грешка: %s", e)
+
+    t = threading.Thread(target=_mci_play, daemon=True, name="mci-audio")
+    t.start()
+
+    # Wait briefly to see if MCI initialized successfully
+    await asyncio.sleep(1.2)
+    if t.is_alive():
+        _python_audio_stop  = stop_event
+        _python_audio_thread = t
+        return True
+
+    return False
+
+
 async def _stop_local_player():
-    """Terminate any running local player subprocess."""
-    global _local_player_proc
+    """Terminate any running local player (subprocess or Python thread)."""
+    global _local_player_proc, _python_audio_stop, _python_audio_thread
+
     if _local_player_proc:
         try:
             _local_player_proc.terminate()
@@ -1923,7 +2005,15 @@ async def _stop_local_player():
             except Exception:
                 pass
         _local_player_proc = None
-        log.info("[player] Локалният плейър спрян")
+        log.info("[player] Subprocess плейър спрян")
+
+    if _python_audio_stop:
+        _python_audio_stop.set()
+        _python_audio_stop = None
+        if _python_audio_thread and _python_audio_thread.is_alive():
+            _python_audio_thread.join(timeout=2.0)
+        _python_audio_thread = None
+        log.info("[player] Python audio плейър спрян")
 
 
 async def _send_strm_stop():

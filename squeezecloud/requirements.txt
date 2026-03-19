@@ -1,3 +1,7 @@
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 httpx>=0.27.0
+
+# Optional — enables pure-Python audio playback on the server (not needed on Windows
+# since the built-in winmm MCI player is used automatically):
+# pip install sounddevice miniaudio   (Linux/macOS only, Python ≤ 3.12)
