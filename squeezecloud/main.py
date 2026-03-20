@@ -867,7 +867,7 @@ async def cometd(request: Request):
                     "clientId": client_id,
                     "successful": True,
                     "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
-                    "advice": {"timeout": 60000, "interval": 0, "reconnect": "retry"},
+                    "advice": {"timeout": 0, "interval": 0, "reconnect": "retry"},
                 }]) + "\r\n"
                 yield keepalive.encode()
 
@@ -907,8 +907,8 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
             "clientId": client_id,
             "successful": True,
             "advice": {
-                "timeout": 60000,
-                "interval": 0,
+                "timeout": 0,        # polling mode: respond immediately (SKILL rule #9)
+                "interval": 5000,    # 5s between reconnect attempts (FIRMWARE_ANALYSIS §3.1)
                 "reconnect": "retry",
             },
         }
@@ -921,7 +921,7 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
             "clientId": client_id,
             "successful": True,
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
-            "advice": {"timeout": 60000, "interval": 0, "reconnect": "retry"},
+            "advice": {"timeout": 0, "interval": 0, "reconnect": "retry"},
         }
 
     # ── /meta/reconnect ──────────────────────────────────────────────────────
@@ -934,7 +934,7 @@ async def _handle_comet_message(msg: dict, channel: str) -> dict:
             "clientId": client_id,
             "successful": True,
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
-            "advice": {"timeout": 60000, "interval": 0, "reconnect": "retry"},
+            "advice": {"timeout": 0, "interval": 0, "reconnect": "retry"},
         }
 
     # ── /meta/subscribe ──────────────────────────────────────────────────────
@@ -1299,6 +1299,7 @@ async def stream_proxy(url: str):
     log.info("[stream-proxy] → %s", url[:100])
 
     async def generate():
+        upstream_content_type = "audio/mpeg"
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(connect=15.0, read=None, write=None, pool=None),
@@ -1310,15 +1311,25 @@ async def stream_proxy(url: str):
                     # Do NOT request Icy-MetaData — keeps the byte stream clean
                     # (the Squeezebox expects icy-metaint header if metadata is embedded)
                 }) as resp:
+                    upstream_content_type = resp.headers.get("content-type", "audio/mpeg").split(";")[0].strip()
                     async for chunk in resp.aiter_bytes(8192):
                         yield chunk
         except Exception as e:
             log.warning("[stream-proxy] Stream error: %s", e)
 
+    # Determine media type before streaming (best effort — use URL heuristic first)
+    url_lower = url.lower()
+    if any(x in url_lower for x in ("_opus", ".opus", "ogg")):
+        media_type = "audio/ogg"
+    elif any(x in url_lower for x in ("_aac", ".aac", ".m3u8")):
+        media_type = "audio/aac"
+    else:
+        media_type = "audio/mpeg"
+
     from starlette.responses import StreamingResponse as _SR
     return _SR(
         generate(),
-        media_type="audio/mpeg",
+        media_type=media_type,
         headers={
             "Cache-Control": "no-cache",
             "Accept-Ranges": "none",
@@ -2046,16 +2057,25 @@ async def _send_strm_play(url: str, name: str):
     """Send strm start to connected Squeezebox, or start local software player."""
     global _slim_writer, _local_ip
 
-    # If TCP isn't connected yet but CometD is active, wait briefly for it.
+    # If TCP isn't connected yet but CometD is active, wait for it.
+    # The device connects TCP (3483) and CometD (9000) nearly simultaneously;
+    # give it up to 10 seconds to establish the binary SlimProto connection.
     if not _slim_writer and (time.time() - _comet_last_seen) < 30:
-        for _ in range(6):          # up to 3 seconds
+        for _ in range(20):          # up to 10 seconds
             await asyncio.sleep(0.5)
             if _slim_writer:
+                log.info("[strm] TCP з'явився після очікування — продовжуємо")
                 break
         if not _slim_writer:
-            log.warning("[strm] Squeezebox свързан по CometD но TCP (порт 3483) не е готов. "
-                        "Провери hosts файла на устройството — www.squeezenetwork.com "
-                        "трябва да сочи към %s", _local_ip)
+            log.warning(
+                "[strm] ⚠️  TCP 3483 не свързан след 10s.\n"
+                "  Станцията '%s' е ЗАПАЗЕНА — ще се пусне АВТОМАТИЧНО при TCP reconnect.\n"
+                "  Ако след 60s не свири, провери:\n"
+                "  • Windows Firewall → Inbound Rules → TCP 3483 (LISTENING)\n"
+                "  • /mnt/storage/etc/hosts на устройството → www.squeezenetwork.com = %s\n"
+                "  • Рестартирай устройството за да принудиш TCP reconnect",
+                name, _local_ip
+            )
 
     if _slim_writer:
         # ── Physical Squeezebox connected — send strm TCP command ─────────────
@@ -2095,11 +2115,16 @@ async def _send_strm_play(url: str, name: str):
             log.error("[strm] Грешка при изпращане на strm start: %s", e)
             _slim_writer = None   # connection is broken; clear so next play retries
     else:
-        # ── No physical device OR TCP not yet ready ───────────────────────────
+        # ── No physical device — CometD tells us if the device is visible ─────
         if (time.time() - _comet_last_seen) < 30:
-            log.warning("[strm] Squeezebox CometD активен но TCP не свързан — "
-                        "радиото трябва да пусне звук само! "
-                        "Ако не свири: добави www.squeezenetwork.com=%s в /mnt/storage/etc/hosts", _local_ip)
+            # Device is reachable via CometD but TCP 3483 is not open yet.
+            # DO NOT start local player — user explicitly wants Squeezebox playback.
+            # _now_playing is still set → HELO auto-replay will fire when TCP reconnects.
+            log.warning(
+                "[strm] Станцията '%s' е ЗАПАЗЕНА. Изчакване на TCP reconnect...\n"
+                "  Устройството свири АВТОМАТИЧНО щом свърже TCP 3483.",
+                name
+            )
         else:
             log.info("[player] Няма Squeezebox — пускам локално: %s", name)
             await _start_local_player(url, name)
@@ -2362,14 +2387,25 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
 
                 # If there's something to play, re-send strm start (reconnect case)
                 if _now_playing:
+                    log.info("[Slim] ✓ TCP reconnect — автоматично пускам: %s",
+                             _now_playing.get("name", ""))
                     asyncio.create_task(_send_strm_play(
                         _now_playing["url"], _now_playing.get("name", "")
                     ))
 
             elif op == "STAT":
                 event = body[0:4].decode("ascii", errors="ignore") if len(body) >= 4 else "????"
-                log.debug("[Slim] STAT event=%r", event)
-                # Не отговаряме — просто държим връзката жива
+                if event in ("STMc", "STMs", "STMt", "STMd", "STMn", "STMp", "STMu", "STMl"):
+                    level = log.info if event in ("STMc", "STMs", "STMn") else log.debug
+                    level("[Slim] STAT %s від MAC=%s", event, _device_mac)
+                    if event == "STMn":
+                        log.warning("[Slim] ⚠️  Устройството НЕ МОЖЕ да се свърже към stream URL! "
+                                    "Провери /stream proxy — устройството получи strm-s но не може "
+                                    "да отвори HTTP връзка към %s:9000", _local_ip)
+                    elif event == "STMc":
+                        log.info("[Slim] ✓ Устройството се свърза към stream (TCP audio OK)")
+                    elif event == "STMs":
+                        log.info("[Slim] ✓ Устройството започна да свири 🎵")
 
             elif op == "BYE!":
                 log.info("[Slim] BYE от %s", addr)
@@ -2495,6 +2531,29 @@ def get_local_ip() -> str:
         s.close()
 
 
+async def _strm_watchdog():
+    """
+    Background task: every 15 seconds, if the device has reconnected TCP (_slim_writer set)
+    and there is a pending _now_playing that wasn't delivered yet, re-send strm-s.
+    This is a safety net for the case where TCP reconnects after _send_strm_play gave up.
+    The HELO handler also does this, but the watchdog covers any edge cases.
+    """
+    _last_sent_url: str = ""
+    while True:
+        await asyncio.sleep(15)
+        if _slim_writer and _now_playing:
+            url = _now_playing.get("url", "")
+            if url and url != _last_sent_url:
+                started_at = _now_playing.get("started_at", 0)
+                # Only retry if the station was selected recently (within 10 minutes)
+                if (time.time() - started_at) < 600:
+                    log.info("[watchdog] TCP свързан + _now_playing запазен — изпращам strm")
+                    _last_sent_url = url
+                    asyncio.create_task(_send_strm_play(url, _now_playing.get("name", "")))
+        elif not _now_playing:
+            _last_sent_url = ""   # reset when stopped
+
+
 async def main():
     import uvicorn
 
@@ -2544,13 +2603,14 @@ async def main():
     print("=" * 60)
 
     # Стартираме всичките три услуги паралелно
-    udp_task  = asyncio.create_task(slim_udp_discovery(local_ip))
-    slim_task = asyncio.create_task(start_slim_server())
+    udp_task      = asyncio.create_task(slim_udp_discovery(local_ip))
+    slim_task     = asyncio.create_task(start_slim_server())
+    watchdog_task = asyncio.create_task(_strm_watchdog())
 
     config = uvicorn.Config("main:app", host="0.0.0.0", port=9000, reload=False, log_level="info")
     server = uvicorn.Server(config)
 
-    await asyncio.gather(udp_task, slim_task, server.serve())
+    await asyncio.gather(udp_task, slim_task, watchdog_task, server.serve())
 
 
 if __name__ == "__main__":

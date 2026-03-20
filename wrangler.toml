@@ -10,6 +10,11 @@ compatibility_flags = ["nodejs_compat"]
 #binding = "RADIO_KV"
 #id = "REPLACE_WITH_YOUR_KV_ID"
 
+[observability]
+[observability.logs]
+enabled = false
+invocation_logs = true
+
 [vars]
 ENVIRONMENT = "production"
 

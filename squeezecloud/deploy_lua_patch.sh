@@ -168,7 +168,7 @@ echo "  baby   : ssh squeezebox grep setSNHostname $BABY_TARGET_FILE"
 echo "  welcome: ssh squeezebox head -3 $WELCOME_TARGET_FILE"
 echo "========================================================"
 
-cat > /mnt/storage/etc/hosts << 'EOF'
+cat > /etc/hosts << 'EOF'
 127.0.0.1 localhost
 192.168.1.43 mysqueezebox.com
 192.168.1.43 www.mysqueezebox.com
