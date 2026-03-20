@@ -167,13 +167,3 @@ echo "  hosts  : ssh squeezebox cat $HOSTS_FILE"
 echo "  baby   : ssh squeezebox grep setSNHostname $BABY_TARGET_FILE"
 echo "  welcome: ssh squeezebox head -3 $WELCOME_TARGET_FILE"
 echo "========================================================"
-
-cat > /etc/hosts << 'EOF'
-127.0.0.1 localhost
-192.168.1.43 mysqueezebox.com
-192.168.1.43 www.mysqueezebox.com
-192.168.1.43 www.squeezenetwork.com
-192.168.1.43 update.squeezenetwork.com
-192.168.1.43 config.logitechmusic.com
-EOF
-reboot
