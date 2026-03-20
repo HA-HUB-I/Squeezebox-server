@@ -170,5 +170,10 @@ echo "========================================================"
 
 cat > /mnt/storage/etc/hosts << 'EOF'
 127.0.0.1 localhost
+192.168.1.43 mysqueezebox.com
+192.168.1.43 www.mysqueezebox.com
+192.168.1.43 www.squeezenetwork.com
+192.168.1.43 update.squeezenetwork.com
+192.168.1.43 config.logitechmusic.com
 EOF
 reboot

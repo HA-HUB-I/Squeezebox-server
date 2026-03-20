@@ -7,6 +7,8 @@ SqueezeCloud — локален сървър имитиращ mysqueezebox.com
 import asyncio
 import json
 import logging
+import os
+import shutil
 import socket
 import struct
 import sys
@@ -1317,7 +1319,12 @@ async def stream_proxy(url: str):
     return _SR(
         generate(),
         media_type="audio/mpeg",
-        headers={"Cache-Control": "no-cache", "Accept-Ranges": "none"},
+        headers={
+            "Cache-Control": "no-cache",
+            "Accept-Ranges": "none",
+            "icy-name": "Radio",
+            "icy-br": "128",
+        },
     )
 
 
@@ -2039,6 +2046,17 @@ async def _send_strm_play(url: str, name: str):
     """Send strm start to connected Squeezebox, or start local software player."""
     global _slim_writer, _local_ip
 
+    # If TCP isn't connected yet but CometD is active, wait briefly for it.
+    if not _slim_writer and (time.time() - _comet_last_seen) < 30:
+        for _ in range(6):          # up to 3 seconds
+            await asyncio.sleep(0.5)
+            if _slim_writer:
+                break
+        if not _slim_writer:
+            log.warning("[strm] Squeezebox свързан по CometD но TCP (порт 3483) не е готов. "
+                        "Провери hosts файла на устройството — www.squeezenetwork.com "
+                        "трябва да сочи към %s", _local_ip)
+
     if _slim_writer:
         # ── Physical Squeezebox connected — send strm TCP command ─────────────
         server_ip = _local_ip if _local_ip not in ("127.0.0.1", "") else get_local_ip()
@@ -2052,30 +2070,81 @@ async def _send_strm_play(url: str, name: str):
         ).encode("utf-8")
         ip_bytes = bytes(int(p) for p in server_ip.split("."))
         port_bytes = struct.pack("!H", 9000)
+        # Detect format: 'm'=mp3 works for most stations; use 'a' for AAC, 'o' for ogg/opus
+        url_lower = url.lower()
+        if any(x in url_lower for x in ("_aac", ".aac", "aac-", "/aac", "format=aac")):
+            fmt = ord('a')
+        elif any(x in url_lower for x in ("_opus", ".opus", "opus-", "/opus", "ogg", "icecast.walmradio")):
+            fmt = ord('o')   # ogg container (opus/vorbis)
+        else:
+            fmt = ord('m')   # default: mp3
         try:
             _slim_send(_slim_writer, b"strm", b"q" + b"\x00" * 24)
             await _slim_writer.drain()
             await asyncio.sleep(0.05)
             strm_start = bytes([
-                ord('s'), ord('1'), ord('m'),
+                ord('s'), ord('1'), fmt,
                 ord('?'), ord('?'), ord('?'), ord('?'),
                 255, 0, 0, ord('0'), 0, 0, 0,
                 0, 0, 0, 0,
             ]) + port_bytes + ip_bytes + http_req
             _slim_send(_slim_writer, b"strm", strm_start)
             await _slim_writer.drain()
-            log.info("[strm] ✓ strm start → %s  (%s)", name, url[:80])
+            log.info("[strm] ✓ strm start (fmt=%s) → %s  (%s)", chr(fmt), name, url[:80])
         except Exception as e:
             log.error("[strm] Грешка при изпращане на strm start: %s", e)
+            _slim_writer = None   # connection is broken; clear so next play retries
     else:
-        # ── No physical device — use local software player ────────────────────
-        log.info("[player] Няма Squeezebox — пускам локално: %s", name)
-        await _start_local_player(url, name)
+        # ── No physical device OR TCP not yet ready ───────────────────────────
+        if (time.time() - _comet_last_seen) < 30:
+            log.warning("[strm] Squeezebox CometD активен но TCP не свързан — "
+                        "радиото трябва да пусне звук само! "
+                        "Ако не свири: добави www.squeezenetwork.com=%s в /mnt/storage/etc/hosts", _local_ip)
+        else:
+            log.info("[player] Няма Squeezebox — пускам локално: %s", name)
+            await _start_local_player(url, name)
+
+
+def _find_executable(name: str) -> Optional[str]:
+    """Find an executable by name in PATH and common Windows install locations."""
+    found = shutil.which(name)
+    if found:
+        return found
+    if sys.platform == "win32":
+        import glob as _glob
+        # Common fixed install locations
+        common = [
+            rf"C:\ffmpeg\bin\{name}.exe",
+            rf"C:\Program Files\ffmpeg\bin\{name}.exe",
+            rf"C:\Program Files (x86)\ffmpeg\bin\{name}.exe",
+            rf"C:\tools\ffmpeg\bin\{name}.exe",
+            rf"{os.environ.get('LOCALAPPDATA','')}\Programs\ffmpeg\bin\{name}.exe",
+            rf"{os.environ.get('APPDATA','')}\ffmpeg\bin\{name}.exe",
+        ]
+        for p in common:
+            if p and os.path.isfile(p):
+                return p
+        # WinGet installs to a hashed path — search with glob
+        winget_base = os.path.join(
+            os.environ.get("LOCALAPPDATA", ""),
+            "Microsoft", "WinGet", "Packages",
+        )
+        if os.path.isdir(winget_base):
+            # e.g. Gyan.FFmpeg_Microsoft.Winget.Source_*/ffmpeg-*/bin/ffplay.exe
+            patterns = [
+                os.path.join(winget_base, "*ffmpeg*", "*", "bin", f"{name}.exe"),
+                os.path.join(winget_base, "*ffmpeg*", "bin", f"{name}.exe"),
+            ]
+            for pat in patterns:
+                matches = _glob.glob(pat, recursive=False)
+                if matches:
+                    return matches[0]
+    return None
 
 
 async def _start_local_player(url: str, name: str):
     """Start a local player: tries ffplay/mpv/vlc, then Windows PowerShell WMP,
-    then pure-Python sounddevice+miniaudio, in that order."""
+    then pure-Python Windows MCI, in that order."""
     global _local_player_proc, _local_ip
     await _stop_local_player()
 
@@ -2083,12 +2152,18 @@ async def _start_local_player(url: str, name: str):
     proxy_url = f"http://{server_ip}:9000/stream?url={urllib.parse.quote(url, safe='')}"
 
     # ── 1. Subprocess candidates ──────────────────────────────────────────────
-    candidates = [
-        ["ffplay", "-nodisp", "-loglevel", "quiet", "-i", proxy_url],
-        ["ffplay", "-nodisp", "-loglevel", "quiet", proxy_url],
-        ["mpv",    "--no-video", "--really-quiet", proxy_url],
-        ["vlc",    "--intf", "dummy", "--quiet", proxy_url],
-    ]
+    # Resolve full paths first so we get a useful log message if not found
+    candidates = []
+    for prog, args in [
+        ("ffplay", ["-nodisp", "-loglevel", "quiet", proxy_url]),
+        ("mpv",    ["--no-video", "--really-quiet", proxy_url]),
+        ("vlc",    ["--intf", "dummy", "--quiet", proxy_url]),
+    ]:
+        path = _find_executable(prog)
+        if path:
+            candidates.append([path] + args)
+        else:
+            log.debug("[player] %s не е намерен в PATH", prog)
 
     # Windows-native: PowerShell + Windows Media Player COM (no install needed)
     if sys.platform == "win32":
@@ -2100,8 +2175,9 @@ async def _start_local_player(url: str, name: str):
             "$wmp.controls.play(); "
             "Start-Sleep -Seconds 86400"
         )
+        ps_path = _find_executable("powershell") or "powershell"
         candidates.append([
-            "powershell", "-WindowStyle", "Hidden", "-NonInteractive",
+            ps_path, "-WindowStyle", "Hidden", "-NonInteractive",
             "-Command", ps_wmp,
         ])
 
@@ -2128,13 +2204,18 @@ async def _start_local_player(url: str, name: str):
         return
 
     # ── 3. Nothing worked ─────────────────────────────────────────────────────
-    log.warning(
-        "[player] Не е намерен локален плейър. "
-        "Инсталирайте ffmpeg (winget install Gyan.FFmpeg) "
-        "ИЛИ изпълнете: pip install sounddevice miniaudio  "
-        "ИЛИ слушайте директно в браузъра: http://%s:9000/webcontrol",
-        server_ip,
-    )
+    ffplay_path = _find_executable("ffplay")
+    if ffplay_path:
+        log.warning("[player] ffplay намерен в %s но не успя да стартира!", ffplay_path)
+    else:
+        log.warning(
+            "[player] ffplay не е намерен. "
+            "Ако ffmpeg е инсталиран, добавете го в PATH: "
+            "Старт → 'Редактирай системни ENV' → Path → Добави C:\\ffmpeg\\bin  "
+            "ИЛИ инсталирайте: winget install Gyan.FFmpeg  "
+            "Можете да слушате в браузъра: http://%s:9000/webcontrol",
+            server_ip,
+        )
 
 
 async def _start_python_audio(url: str, name: str) -> bool:
@@ -2229,14 +2310,22 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
     log.info("[Slim] Свързан: %s", addr)
     keepalive_task = None
 
+    # Enable OS-level TCP keepalive so dead connections are detected without timeouts
+    try:
+        sock = writer.get_extra_info("socket")
+        if sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+    except Exception:
+        pass
+
     global _slim_writer, _device_mac
     _slim_writer = writer
-    log.debug("[Slim] _slim_writer обновен за %s", addr)
+    log.info("[Slim] ✓ _slim_writer SET для %s", addr)
 
     async def send_keepalive():
         try:
             while True:
-                await asyncio.sleep(10)
+                await asyncio.sleep(25)       # device READ_TIMEOUT = 35s
                 _slim_send(writer, b"strm", b"t" + b"\x00" * 24)
                 await writer.drain()
         except Exception:
@@ -2244,35 +2333,38 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
 
     try:
         while True:
-            header = await asyncio.wait_for(reader.readexactly(8), timeout=60)
+            # No timeout — wait indefinitely; OS TCP keepalive detects dead connection
+            header = await reader.readexactly(8)
             op = header[:4].decode("ascii", errors="ignore").strip()
             length = int.from_bytes(header[4:8], "big")
 
             body = b""
             if length > 0:
-                body = await asyncio.wait_for(reader.readexactly(length), timeout=10)
+                body = await reader.readexactly(length)
 
             log.debug("[Slim] OP=%r len=%d", op, length)
 
             if op == "HELO":
                 if len(body) >= 8:
                     mac = ":".join(f"{b:02x}" for b in body[2:8])
-                    log.info("[Slim] HELO от MAC=%s", mac)
-                    # Запази реалния MAC глобално
+                    log.info("[Slim] HELO від MAC=%s", mac)
                     global _device_mac
                     _device_mac = mac
 
-                # Само vers — БЕЗ serv!
-                # serv кара устройството да disconnect/reconnect
-                # Реалният LMS изпраща serv само при redirect към друг сървър
                 version = CONFIG["version"].encode("utf-8")
                 _slim_send(writer, b"vers", version)
                 await writer.drain()
-                log.debug("[Slim] ✓ HELO → само vers (без serv)")
+                log.info("[Slim] ✓ HELO → vers відправлено")
 
-                # Стартирай keepalive
+                # Start keepalive
                 if keepalive_task is None:
                     keepalive_task = asyncio.create_task(send_keepalive())
+
+                # If there's something to play, re-send strm start (reconnect case)
+                if _now_playing:
+                    asyncio.create_task(_send_strm_play(
+                        _now_playing["url"], _now_playing.get("name", "")
+                    ))
 
             elif op == "STAT":
                 event = body[0:4].decode("ascii", errors="ignore") if len(body) >= 4 else "????"
@@ -2291,7 +2383,7 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
 
     except asyncio.IncompleteReadError:
         pass
-    except (asyncio.TimeoutError, ConnectionResetError, BrokenPipeError):
+    except (ConnectionResetError, BrokenPipeError):
         pass
     except Exception as e:
         log.error("[Slim] Грешка: %s", e)
@@ -2300,6 +2392,7 @@ async def slim_handle_client(reader: asyncio.StreamReader, writer: asyncio.Strea
             keepalive_task.cancel()
         if _slim_writer is writer:
             _slim_writer = None
+            log.info("[Slim] _slim_writer CLEARED (disconnect) %s", addr)
         try:
             writer.close()
         except Exception:
@@ -2411,13 +2504,26 @@ async def main():
     global _local_ip
     _local_ip = local_ip
 
+    # ── Detect available media players ────────────────────────────────────────
+    players_found = []
+    for p in ("ffplay", "mpv", "vlc"):
+        path = _find_executable(p)
+        if path:
+            players_found.append(f"{p} ({path})")
+    if sys.platform == "win32":
+        players_found.append("PowerShell WMP (вграден)")
+
     print("=" * 60)
     print("  SqueezeCloud сървър")
     print("=" * 60)
     print(f"  Локално IP:       {local_ip}")
-    print(f"  HTTP порт:        9000  (LMS API)")
-    print(f"  TCP порт:         3483  (Slim Protocol)")
+    print(f"  HTTP порт:        9000  (LMS API + Web UI)")
+    print(f"  TCP порт:         3483  (Slim Protocol — аудио към Squeezebox)")
     print(f"  UDP порт:         3483  (Autodiscovery broadcast)")
+    print(f"  Станции:          {len(CUSTOM_STATIONS)} потребителски + {len(STATIC_STATIONS)} вградени")
+    print(f"  Медия плейъри:    {', '.join(players_found) if players_found else 'не са намерени — само Web UI'}")
+    print()
+    print(f"  Уеб контрол:      http://{local_ip}:9000/webcontrol")
     print()
     print("  Squeezebox ще се открие АВТОМАТИЧНО чрез broadcast!")
     print()
@@ -2433,7 +2539,7 @@ async def main():
     print()
     print("  След промяна на hosts: reboot")
     print()
-    print("  ВАЖНО: www.squeezenetwork.com е нужен за TCP Slim Protocol (порт 3483)!")
+    print("  ВАЖНО: www.squeezenetwork.com → TCP Slim Protocol (порт 3483)")
     print("  Без него устройството не изпраща аудио команди към сървъра.")
     print("=" * 60)
 
